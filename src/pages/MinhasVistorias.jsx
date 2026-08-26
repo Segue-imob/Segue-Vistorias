@@ -65,7 +65,7 @@ function VistoriaCard({ vistoria, tab, onAceitar, aceitando }) {
         )}
         {tab === 'andamento' && (
           <button type="button" onClick={abrirChecklist} className="btn-primary !py-1.5 text-xs">
-            <ClipboardList size={13} /> Continuar Vistoria
+            <ClipboardList size={13} /> Iniciar Vistoria
           </button>
         )}
       </div>

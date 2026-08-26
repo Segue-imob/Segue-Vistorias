@@ -69,6 +69,11 @@ export const PERMISSIONS = {
   viewVistorias: (role) => isAdmin(role),
   viewMinhasVistorias: (role) => isVistoriador(role),
   viewUsuarios: (role) => isAdmin(role),
+  // Abrir a tela de Execução/Checklist de uma vistoria específica
+  // (/minhas-vistorias/:id): o Vistoriador dono dela, ou o Administrador
+  // (para acompanhamento/QA — a checagem de "é o vistoriador certo?"
+  // continua acontecendo na consulta em si, via vistoriador_id).
+  viewVistoriaExecucao: (role) => isVistoriador(role) || isAdmin(role),
 
   // Ações
   scheduleVistoria: (role) => isAdmin(role) || isGestao(role),

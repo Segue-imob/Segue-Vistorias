@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Loader2, MapPin, Plus } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, MapPin, Plus } from 'lucide-react'
 import { useVistoriaExecucao } from '../hooks/useVistoriaExecucao'
+import { useAuth } from '../context/AuthContext'
+import { isAdmin } from '../lib/permissions'
 import AmbienteCard from '../components/execucao/AmbienteCard'
 import FinalizarVistoriaModal from '../components/execucao/FinalizarVistoriaModal'
 import StatusBadge from '../components/StatusBadge'
@@ -10,11 +12,13 @@ import { AMBIENTES_PADRAO, buildMapsUrl } from '../lib/vistoriaExecucao'
 export default function VistoriaExecucao() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { role } = useAuth()
 
   const {
     vistoria,
     ambientes,
     loading,
+    error,
     addAmbiente,
     removeAmbiente,
     updateObservacao,
@@ -40,14 +44,29 @@ export default function VistoriaExecucao() {
 
   if (!vistoria) {
     return (
-      <div className="card p-6 text-center text-sm text-slate-500">
-        Vistoria não encontrada ou você não tem acesso a ela.
+      <div className="card flex flex-col items-center gap-2 p-6 text-center">
+        <AlertTriangle size={20} className="text-amber-500" />
+        <p className="text-sm font-semibold text-slate-700">
+          Vistoria não encontrada ou você não tem acesso a ela.
+        </p>
+        {/* Mostra o motivo real (erro do Supabase) quando existir — sem
+            error, 0 linhas normalmente significa que o RLS bloqueou o
+            acesso ou o ID na URL não corresponde a nenhuma vistoria. */}
+        {error && (
+          <p className="max-w-md text-xs text-slate-400">
+            Detalhe técnico: {error.message || String(error)}
+          </p>
+        )}
+        <button type="button" onClick={() => navigate('/minhas-vistorias')} className="btn-secondary mt-2">
+          <ArrowLeft size={14} /> Voltar para Minhas Vistorias
+        </button>
       </div>
     )
   }
 
   const mapsUrl = buildMapsUrl(vistoria.imoveis)
   const isEncerrada = vistoria.status === 'finalizada' || vistoria.status === 'cancelada'
+  const visualizandoComoAdmin = isAdmin(role)
 
   const handleAddAmbiente = async () => {
     const nome = novoAmbiente === 'Outro' ? customAmbiente.trim() : novoAmbiente
@@ -103,6 +122,13 @@ export default function VistoriaExecucao() {
           </a>
         )}
       </div>
+
+      {visualizandoComoAdmin && (
+        <div className="card border-l-4 border-l-brand-accent p-3 text-xs text-slate-500">
+          Você está vendo esta vistoria como <strong>Administrador</strong> — o checklist normalmente é
+          preenchido pelo vistoriador responsável.
+        </div>
+      )}
 
       {isEncerrada && (
         <div className="card border-l-4 border-l-[#4CAF50] p-4">

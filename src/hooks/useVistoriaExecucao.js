@@ -22,9 +22,19 @@ export function useVistoriaExecucao(vistoriaId) {
   const [error, setError] = useState(null)
 
   const fetchAll = useCallback(async () => {
-    if (!vistoriaId) return
+    if (!vistoriaId) {
+      setVistoria(null)
+      setAmbientes([])
+      setError(new Error('ID da vistoria ausente na URL.'))
+      setLoading(false)
+      return
+    }
     setLoading(true)
 
+    // .maybeSingle() em vez de .single(): 0 linhas vira { data: null, error: null }
+    // em vez de lançar um erro genérico — assim dá pra distinguir "vistoria
+    // realmente não existe / RLS bloqueou" (data null, sem error) de um erro
+    // de verdade (rede, sintaxe da query etc.), e mostrar a mensagem certa.
     const [{ data: vistoriaData, error: vErr }, { data: ambientesData, error: aErr }] = await Promise.all([
       supabase
         .from('vistorias')
@@ -35,17 +45,17 @@ export function useVistoriaExecucao(vistoriaId) {
           imoveis:imovel_id ( id, codigo_imovel, endereco, bairro, cidade, inquilino_nome, proprietario_nome )
         `
         )
-        .eq('id', vistoriaId)
-        .single(),
+        .eq('id', String(vistoriaId).trim())
+        .maybeSingle(),
       supabase
         .from('vistoria_ambientes')
         .select(AMBIENTE_SELECT)
-        .eq('vistoria_id', vistoriaId)
+        .eq('vistoria_id', String(vistoriaId).trim())
         .order('created_at', { ascending: true })
     ])
 
     setError(vErr || aErr || null)
-    setVistoria(vErr ? null : vistoriaData)
+    setVistoria(vistoriaData || null)
     setAmbientes(aErr ? [] : ambientesData || [])
     setLoading(false)
   }, [vistoriaId])

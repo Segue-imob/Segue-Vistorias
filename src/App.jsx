@@ -79,7 +79,7 @@ export default function App() {
         <Route
           path="/minhas-vistorias/:id"
           element={
-            <ProtectedRoute permission="viewMinhasVistorias">
+            <ProtectedRoute permission="viewVistoriaExecucao">
               <VistoriaExecucao />
             </ProtectedRoute>
           }

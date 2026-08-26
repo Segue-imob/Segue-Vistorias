@@ -370,3 +370,23 @@ create policy "Atualizacao por hierarquia de role"
     or criado_por = auth.uid()
     or (public.is_vistoriador() and vistoriador_id = auth.uid())
   );
+
+-- ============================================================
+-- Reforço da leitura de vistorias (tela de Execução do Vistoriador
+-- e visualização por Administrador). Recria a policy de SELECT
+-- explicitamente com todos os casos que devem enxergar a vistoria:
+-- Administrador, Gestão, o vistoriador atribuído E o solicitante
+-- original — cobre o cenário de "vistoria não encontrada" causado
+-- por uma policy que não incluísse todos esses casos.
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+drop policy if exists "Leitura por hierarquia de role" on public.vistorias;
+create policy "Leitura por hierarquia de role"
+  on public.vistorias for select
+  to authenticated
+  using (
+    public.is_admin()
+    or public.is_gestao()
+    or vistoriador_id = auth.uid()
+    or criado_por = auth.uid()
+  );
