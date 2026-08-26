@@ -23,9 +23,9 @@ Definida em `src/lib/constants.js` (`STATUS`) — única fonte de verdade usada 
 
 Rode o script `supabase/schema.sql` no **SQL Editor** do seu projeto Supabase (ele cria as tabelas `profiles`, `imoveis`, `vistorias` com os nomes de coluna que o front-end espera, habilita Realtime e RLS básico). Se as tabelas já existirem, apenas confira se os nomes de coluna batem — o front consome:
 
-- `profiles`: `id, nome, email, perfil, ativo`
-- `imoveis`: `id, codigo, endereco, inquilino, proprietario`
-- `vistorias`: `id, imovel_id, vistoriador_id, tipo, status, data_hora, observacoes`
+- `profiles`: `id, nome, email, telefone, role, ativo, created_at`
+- `imoveis`: `id, codigo_imovel, endereco, bairro, cidade, proprietario_nome, inquilino_nome`
+- `vistorias`: `id, imovel_id, vistoriador_id, tipo, status, data_agendamento, observacoes`
 
 ## 2. Rodar localmente
 

@@ -11,7 +11,7 @@ function KanbanCard({ vistoria, onDragStart }) {
       className="cursor-grab rounded-xl border border-slate-100 bg-white p-3 shadow-card transition hover:shadow-md active:cursor-grabbing"
     >
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-800">{vistoria.imoveis?.codigo}</span>
+        <span className="text-xs font-bold text-slate-800">{vistoria.imoveis?.codigo_imovel}</span>
         <GripVertical size={14} className="text-slate-300" />
       </div>
       <p className="mb-2 text-xs font-medium text-brand-accent">{vistoria.tipo}</p>
@@ -21,9 +21,9 @@ function KanbanCard({ vistoria, onDragStart }) {
       <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
         <User size={11} /> {vistoria.vistoriador?.nome || 'Sem vistoriador'}
       </p>
-      {vistoria.data_hora && (
+      {vistoria.data_agendamento && (
         <p className="mt-2 text-[11px] font-semibold text-slate-400">
-          {format(new Date(vistoria.data_hora), 'dd/MM/yyyy HH:mm')}
+          {format(new Date(vistoria.data_agendamento), 'dd/MM/yyyy HH:mm')}
         </p>
       )}
     </div>

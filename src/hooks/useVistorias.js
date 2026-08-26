@@ -17,16 +17,15 @@ export function useVistorias() {
         id,
         tipo,
         status,
-        data_hora,
+        data_agendamento,
         observacoes,
-        created_at,
         imovel_id,
         vistoriador_id,
-        imoveis:imovel_id ( id, codigo, endereco, inquilino, proprietario ),
+        imoveis:imovel_id ( id, codigo_imovel, endereco, bairro, cidade, inquilino_nome, proprietario_nome ),
         vistoriador:vistoriador_id ( id, nome, email )
       `
       )
-      .order('data_hora', { ascending: true })
+      .order('data_agendamento', { ascending: true })
 
     if (error) {
       setError(error)

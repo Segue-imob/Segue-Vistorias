@@ -12,7 +12,8 @@ create table if not exists public.profiles (
   id uuid primary key default gen_random_uuid(),
   nome text not null,
   email text not null unique,
-  perfil text not null check (perfil in ('Administrador', 'Gestor', 'Vistoriador', 'Corretor')),
+  telefone text,
+  role text not null check (role in ('Administrador', 'Gestor', 'Vistoriador', 'Corretor')),
   ativo boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -20,10 +21,12 @@ create table if not exists public.profiles (
 -- Imóveis
 create table if not exists public.imoveis (
   id uuid primary key default gen_random_uuid(),
-  codigo text not null unique,
+  codigo_imovel text not null unique,
   endereco text not null,
-  inquilino text,
-  proprietario text,
+  bairro text,
+  cidade text,
+  proprietario_nome text,
+  inquilino_nome text,
   created_at timestamptz not null default now()
 );
 
@@ -35,12 +38,12 @@ create table if not exists public.vistorias (
   tipo text not null check (tipo in ('Entrada', 'Saída', 'Conferência')),
   status text not null default 'agendada'
     check (status in ('agendada', 'aceita', 'finalizada', 'cancelada')),
-  data_hora timestamptz not null,
+  data_agendamento timestamptz not null,
   observacoes text,
   created_at timestamptz not null default now()
 );
 
-create index if not exists idx_vistorias_data_hora on public.vistorias (data_hora);
+create index if not exists idx_vistorias_data_agendamento on public.vistorias (data_agendamento);
 create index if not exists idx_vistorias_status on public.vistorias (status);
 create index if not exists idx_vistorias_vistoriador on public.vistorias (vistoriador_id);
 

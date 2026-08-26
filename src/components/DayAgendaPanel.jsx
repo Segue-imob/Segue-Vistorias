@@ -5,8 +5,8 @@ import StatusBadge from './StatusBadge'
 
 export default function DayAgendaPanel({ day, vistorias, onAddClick }) {
   const dayVistorias = vistorias
-    .filter((v) => v.data_hora && isSameDay(new Date(v.data_hora), day))
-    .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora))
+    .filter((v) => v.data_agendamento && isSameDay(new Date(v.data_agendamento), day))
+    .sort((a, b) => new Date(a.data_agendamento) - new Date(b.data_agendamento))
 
   return (
     <div className="card flex h-full flex-col p-4 sm:p-5">
@@ -39,15 +39,16 @@ export default function DayAgendaPanel({ day, vistorias, onAddClick }) {
               <div className="mb-2 flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
                   <Clock size={13} />
-                  {format(new Date(v.data_hora), 'HH:mm')}
+                  {format(new Date(v.data_agendamento), 'HH:mm')}
                 </span>
                 <StatusBadge status={v.status} size="sm" />
               </div>
               <p className="text-sm font-semibold text-slate-900">
-                {v.imoveis?.codigo} · {v.tipo}
+                {v.imoveis?.codigo_imovel} · {v.tipo}
               </p>
               <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
                 <MapPin size={12} /> {v.imoveis?.endereco}
+                {v.imoveis?.bairro ? `, ${v.imoveis.bairro}` : ''}
               </p>
               <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
                 <User size={12} /> {v.vistoriador?.nome || 'Sem vistoriador'}

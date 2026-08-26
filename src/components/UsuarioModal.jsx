@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import Modal from './Modal'
 import { PERFIS_USUARIO } from '../lib/constants'
 
-const emptyForm = { nome: '', email: '', perfil: PERFIS_USUARIO[0], ativo: true }
+const emptyForm = { nome: '', email: '', telefone: '', role: PERFIS_USUARIO[0], ativo: true }
 
 export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
   const isEdit = Boolean(usuario)
@@ -15,7 +15,13 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
     if (open) {
       setForm(
         usuario
-          ? { nome: usuario.nome || '', email: usuario.email || '', perfil: usuario.perfil, ativo: usuario.ativo }
+          ? {
+              nome: usuario.nome || '',
+              email: usuario.email || '',
+              telefone: usuario.telefone || '',
+              role: usuario.role,
+              ativo: usuario.ativo
+            }
           : emptyForm
       )
       setErrorMsg('')
@@ -26,7 +32,7 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.nome || !form.email || !form.perfil) {
+    if (!form.nome || !form.email || !form.role) {
       setErrorMsg('Preencha nome, e-mail e perfil.')
       return
     }
@@ -69,8 +75,18 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
         </div>
 
         <div>
+          <label className="label-field">Telefone</label>
+          <input
+            className="input-field"
+            value={form.telefone}
+            onChange={handleChange('telefone')}
+            placeholder="(11) 99999-0000"
+          />
+        </div>
+
+        <div>
           <label className="label-field">Perfil / Função *</label>
-          <select className="input-field" value={form.perfil} onChange={handleChange('perfil')}>
+          <select className="input-field" value={form.role} onChange={handleChange('role')}>
             {PERFIS_USUARIO.map((p) => (
               <option key={p} value={p}>
                 {p}

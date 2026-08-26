@@ -34,14 +34,16 @@ export default function VistoriaListView({ vistorias, onChangeStatus }) {
           {vistorias.map((v) => (
             <tr key={v.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
               <td className="px-4 py-3">
-                <p className="font-semibold text-slate-900">{v.imoveis?.codigo}</p>
+                <p className="font-semibold text-slate-900">{v.imoveis?.codigo_imovel}</p>
                 <p className="flex items-center gap-1 text-xs text-slate-500">
                   <MapPin size={11} /> {v.imoveis?.endereco}
                 </p>
               </td>
               <td className="px-4 py-3 text-slate-700">{v.tipo}</td>
               <td className="px-4 py-3 text-slate-700">
-                {v.data_hora ? format(new Date(v.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : '—'}
+                {v.data_agendamento
+                  ? format(new Date(v.data_agendamento), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                  : '—'}
               </td>
               <td className="px-4 py-3 text-slate-700">{v.vistoriador?.nome || '—'}</td>
               <td className="px-4 py-3">

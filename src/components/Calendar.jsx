@@ -25,7 +25,7 @@ export default function Calendar({ currentMonth, onMonthChange, vistorias, selec
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
 
   const vistoriasByDay = (day) =>
-    vistorias.filter((v) => v.data_hora && isSameDay(new Date(v.data_hora), day))
+    vistorias.filter((v) => v.data_agendamento && isSameDay(new Date(v.data_agendamento), day))
 
   return (
     <div className="card p-4 sm:p-5">
@@ -99,9 +99,9 @@ export default function Calendar({ currentMonth, onMonthChange, vistorias, selec
                       key={v.id}
                       className="truncate rounded px-1.5 py-0.5 text-[10px] font-semibold text-white"
                       style={{ backgroundColor: meta.color }}
-                      title={`${v.imoveis?.codigo || ''} · ${meta.label}`}
+                      title={`${v.imoveis?.codigo_imovel || ''} · ${meta.label}`}
                     >
-                      {format(new Date(v.data_hora), 'HH:mm')} {v.imoveis?.codigo || 'Imóvel'}
+                      {format(new Date(v.data_agendamento), 'HH:mm')} {v.imoveis?.codigo_imovel || 'Imóvel'}
                     </span>
                   )
                 })}

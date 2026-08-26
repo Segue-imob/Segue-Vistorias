@@ -21,7 +21,14 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [showNovoImovel, setShowNovoImovel] = useState(false)
-  const [novoImovel, setNovoImovel] = useState({ codigo: '', endereco: '', inquilino: '', proprietario: '' })
+  const [novoImovel, setNovoImovel] = useState({
+    codigo_imovel: '',
+    endereco: '',
+    bairro: '',
+    cidade: '',
+    inquilino_nome: '',
+    proprietario_nome: ''
+  })
   const [savingImovel, setSavingImovel] = useState(false)
 
   useEffect(() => {
@@ -35,7 +42,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
   const handleChange = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
   const handleCreateImovel = async () => {
-    if (!novoImovel.codigo || !novoImovel.endereco) return
+    if (!novoImovel.codigo_imovel || !novoImovel.endereco) return
     setSavingImovel(true)
     try {
       const data = await createImovel(novoImovel)
@@ -44,7 +51,14 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
         setForm((f) => ({ ...f, imovel_id: created.id }))
       }
       setShowNovoImovel(false)
-      setNovoImovel({ codigo: '', endereco: '', inquilino: '', proprietario: '' })
+      setNovoImovel({
+        codigo_imovel: '',
+        endereco: '',
+        bairro: '',
+        cidade: '',
+        inquilino_nome: '',
+        proprietario_nome: ''
+      })
     } catch (err) {
       setErrorMsg(err.message || 'Erro ao cadastrar imóvel.')
     } finally {
@@ -66,7 +80,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
         tipo: form.tipo,
         vistoriador_id: form.vistoriador_id,
         observacoes: form.observacoes || null,
-        data_hora: new Date(`${form.data}T${form.hora}`).toISOString(),
+        data_agendamento: new Date(`${form.data}T${form.hora}`).toISOString(),
         status: 'agendada'
       })
       onClose()
@@ -98,14 +112,14 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
                 <input
                   placeholder="Código *"
                   className="input-field"
-                  value={novoImovel.codigo}
-                  onChange={(e) => setNovoImovel((f) => ({ ...f, codigo: e.target.value }))}
+                  value={novoImovel.codigo_imovel}
+                  onChange={(e) => setNovoImovel((f) => ({ ...f, codigo_imovel: e.target.value }))}
                 />
                 <input
                   placeholder="Proprietário"
                   className="input-field"
-                  value={novoImovel.proprietario}
-                  onChange={(e) => setNovoImovel((f) => ({ ...f, proprietario: e.target.value }))}
+                  value={novoImovel.proprietario_nome}
+                  onChange={(e) => setNovoImovel((f) => ({ ...f, proprietario_nome: e.target.value }))}
                 />
               </div>
               <input
@@ -114,11 +128,25 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
                 value={novoImovel.endereco}
                 onChange={(e) => setNovoImovel((f) => ({ ...f, endereco: e.target.value }))}
               />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  placeholder="Bairro"
+                  className="input-field"
+                  value={novoImovel.bairro}
+                  onChange={(e) => setNovoImovel((f) => ({ ...f, bairro: e.target.value }))}
+                />
+                <input
+                  placeholder="Cidade"
+                  className="input-field"
+                  value={novoImovel.cidade}
+                  onChange={(e) => setNovoImovel((f) => ({ ...f, cidade: e.target.value }))}
+                />
+              </div>
               <input
                 placeholder="Inquilino"
                 className="input-field"
-                value={novoImovel.inquilino}
-                onChange={(e) => setNovoImovel((f) => ({ ...f, inquilino: e.target.value }))}
+                value={novoImovel.inquilino_nome}
+                onChange={(e) => setNovoImovel((f) => ({ ...f, inquilino_nome: e.target.value }))}
               />
               <button
                 type="button"
@@ -135,7 +163,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
             <option value="">Selecione um imóvel</option>
             {imoveis.map((im) => (
               <option key={im.id} value={im.id}>
-                {im.codigo} — {im.endereco}
+                {im.codigo_imovel} — {im.endereco}
               </option>
             ))}
           </select>

@@ -10,7 +10,7 @@ export function useProfiles() {
     setLoading(true)
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, nome, email, perfil, ativo, created_at')
+      .select('id, nome, email, telefone, role, ativo, created_at')
       .order('nome', { ascending: true })
 
     if (error) {
@@ -37,8 +37,8 @@ export function useProfiles() {
     }
   }, [fetchProfiles])
 
-  // Vistoriadores = usuários ativos com perfil "Vistoriador" (usado nos filtros/agenda)
-  const vistoriadores = profiles.filter((p) => p.perfil === 'Vistoriador' && p.ativo)
+  // Vistoriadores = usuários ativos com role "Vistoriador" (usado nos filtros/agenda)
+  const vistoriadores = profiles.filter((p) => p.role === 'Vistoriador' && p.ativo)
 
   const createProfile = useCallback(async (payload) => {
     const { data, error } = await supabase.from('profiles').insert(payload).select()

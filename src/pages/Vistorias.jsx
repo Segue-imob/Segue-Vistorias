@@ -15,13 +15,17 @@ export default function Vistorias() {
     const term = search.trim().toLowerCase()
     if (!term) return vistorias
     return vistorias.filter((v) => {
-      const codigo = v.imoveis?.codigo?.toLowerCase() || ''
+      const codigo = v.imoveis?.codigo_imovel?.toLowerCase() || ''
       const endereco = v.imoveis?.endereco?.toLowerCase() || ''
-      const inquilino = v.imoveis?.inquilino?.toLowerCase() || ''
-      const proprietario = v.imoveis?.proprietario?.toLowerCase() || ''
+      const bairro = v.imoveis?.bairro?.toLowerCase() || ''
+      const cidade = v.imoveis?.cidade?.toLowerCase() || ''
+      const inquilino = v.imoveis?.inquilino_nome?.toLowerCase() || ''
+      const proprietario = v.imoveis?.proprietario_nome?.toLowerCase() || ''
       return (
         codigo.includes(term) ||
         endereco.includes(term) ||
+        bairro.includes(term) ||
+        cidade.includes(term) ||
         inquilino.includes(term) ||
         proprietario.includes(term)
       )

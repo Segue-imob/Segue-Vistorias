@@ -17,7 +17,12 @@ export default function Usuarios() {
 
   const handleSubmit = async (form, id) => {
     if (id) {
-      await updateProfile(id, { nome: form.nome, perfil: form.perfil, ativo: form.ativo })
+      await updateProfile(id, {
+        nome: form.nome,
+        telefone: form.telefone,
+        role: form.role,
+        ativo: form.ativo
+      })
     } else {
       await createProfile(form)
     }
@@ -85,7 +90,7 @@ export default function Usuarios() {
                   <td className="px-4 py-3 text-slate-600">{user.email}</td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      {user.perfil}
+                      {user.role}
                     </span>
                   </td>
                   <td className="px-4 py-3">
