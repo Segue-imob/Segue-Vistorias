@@ -9,7 +9,15 @@ export default function FinalizarVistoriaModal({ open, onClose, ambientes, onCon
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  const totalFotos = ambientes.reduce((sum, a) => sum + (a.vistoria_fotos?.length || 0), 0)
+  const totalFotos = ambientes.reduce(
+    (sum, a) => sum + (a.vistoria_itens || []).reduce((s, it) => s + (it.vistoria_fotos?.length || 0), 0),
+    0
+  )
+  const totalItensAvaliados = ambientes.reduce(
+    (sum, a) => sum + (a.vistoria_itens || []).filter((it) => it.estado).length,
+    0
+  )
+  const totalItens = ambientes.reduce((sum, a) => sum + (a.vistoria_itens || []).length, 0)
 
   const handleConfirm = async () => {
     setErrorMsg('')
@@ -47,35 +55,43 @@ export default function FinalizarVistoriaModal({ open, onClose, ambientes, onCon
               <div key={a.id} className="border-b border-slate-50 pb-2 last:border-0 last:pb-0">
                 <p className="text-sm font-semibold text-slate-800">{a.ambiente}</p>
 
-                <div className="mt-1 flex flex-wrap gap-1">
+                <div className="mt-1.5 space-y-1.5">
                   {(a.vistoria_itens || []).map((it) => {
                     const meta = ESTADOS_ITEM[it.estado]
-                    if (!meta) return null
+                    const fotosCount = it.vistoria_fotos?.length || 0
                     return (
-                      <span
-                        key={it.id}
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.bg} ${meta.text}`}
-                      >
-                        {it.item}: {meta.label}
-                      </span>
+                      <div key={it.id} className="flex items-start justify-between gap-2 text-xs">
+                        <div className="min-w-0">
+                          <span className="font-medium text-slate-600">{it.item}</span>
+                          {it.observacao && (
+                            <p className="truncate text-[11px] text-slate-400">{it.observacao}</p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          {fotosCount > 0 && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-slate-400">
+                              <ImageIcon size={10} /> {fotosCount}
+                            </span>
+                          )}
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              meta ? `${meta.bg} ${meta.text}` : 'bg-slate-100 text-slate-400'
+                            }`}
+                          >
+                            {meta ? meta.label : 'Não avaliado'}
+                          </span>
+                        </div>
+                      </div>
                     )
                   })}
                 </div>
-
-                {a.observacao && <p className="mt-1 text-xs text-slate-500">{a.observacao}</p>}
-
-                {(a.vistoria_fotos?.length || 0) > 0 && (
-                  <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
-                    <ImageIcon size={11} /> {a.vistoria_fotos.length} foto(s)
-                  </p>
-                )}
               </div>
             ))
           )}
         </div>
 
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          {ambientes.length} ambiente(s) · {totalFotos} foto(s) no total
+          {ambientes.length} ambiente(s) · {totalItensAvaliados}/{totalItens} itens avaliados · {totalFotos} foto(s)
         </p>
 
         <div>

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, MapPin, Plus } from 'lucide-react'
 import { useVistoriaExecucao } from '../hooks/useVistoriaExecucao'
 import { useAuth } from '../context/AuthContext'
 import { isAdmin } from '../lib/permissions'
-import AmbienteCard from '../components/execucao/AmbienteCard'
+import AmbienteSummaryCard from '../components/execucao/AmbienteSummaryCard'
+import ItemCard from '../components/execucao/ItemCard'
 import FinalizarVistoriaModal from '../components/execucao/FinalizarVistoriaModal'
 import StatusBadge from '../components/StatusBadge'
 import { AMBIENTES_PADRAO, buildMapsUrl } from '../lib/vistoriaExecucao'
@@ -21,18 +22,33 @@ export default function VistoriaExecucao() {
     error,
     addAmbiente,
     removeAmbiente,
-    updateObservacao,
+    addItemCustom,
+    removeItem,
     setItemEstado,
-    addFoto,
-    removeFoto,
+    updateItemObservacao,
+    addFotoItem,
+    removeFotoItem,
     finalizarVistoria
   } = useVistoriaExecucao(id)
+
+  // Nível 1 = null (lista de ambientes) · Nível 2 = id do ambiente aberto
+  const [activeAmbienteId, setActiveAmbienteId] = useState(null)
 
   const [novoAmbiente, setNovoAmbiente] = useState(AMBIENTES_PADRAO[0])
   const [customAmbiente, setCustomAmbiente] = useState('')
   const [addingAmbiente, setAddingAmbiente] = useState(false)
   const [addAmbienteError, setAddAmbienteError] = useState('')
+
+  const [novoItemNome, setNovoItemNome] = useState('')
+  const [addingItem, setAddingItem] = useState(false)
+  const [addItemError, setAddItemError] = useState('')
+
   const [finalizarOpen, setFinalizarOpen] = useState(false)
+
+  const activeAmbiente = useMemo(
+    () => ambientes.find((a) => a.id === activeAmbienteId) || null,
+    [ambientes, activeAmbienteId]
+  )
 
   if (loading) {
     return (
@@ -49,9 +65,6 @@ export default function VistoriaExecucao() {
         <p className="text-sm font-semibold text-slate-700">
           Vistoria não encontrada ou você não tem acesso a ela.
         </p>
-        {/* Mostra o motivo real (erro do Supabase) quando existir — sem
-            error, 0 linhas normalmente significa que o RLS bloqueou o
-            acesso ou o ID na URL não corresponde a nenhuma vistoria. */}
         {error && (
           <p className="max-w-md text-xs text-slate-400">
             Detalhe técnico: {error.message || String(error)}
@@ -86,6 +99,29 @@ export default function VistoriaExecucao() {
     }
   }
 
+  const handleAddItemCustom = async () => {
+    const nome = novoItemNome.trim()
+    if (!nome) {
+      setAddItemError('Informe o nome do item.')
+      return
+    }
+    setAddItemError('')
+    setAddingItem(true)
+    try {
+      await addItemCustom(activeAmbienteId, nome)
+      setNovoItemNome('')
+    } catch (err) {
+      setAddItemError(err.message || 'Erro ao adicionar item.')
+    } finally {
+      setAddingItem(false)
+    }
+  }
+
+  const handleRemoveAmbiente = async (ambienteId) => {
+    await removeAmbiente(ambienteId)
+    if (activeAmbienteId === ambienteId) setActiveAmbienteId(null)
+  }
+
   const handleFinalizarConfirm = async (signatureBlob) => {
     await finalizarVistoria(signatureBlob)
     setFinalizarOpen(false)
@@ -97,106 +133,163 @@ export default function VistoriaExecucao() {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => navigate('/minhas-vistorias')}
+          onClick={() => (activeAmbiente ? setActiveAmbienteId(null) : navigate('/minhas-vistorias'))}
           className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
         >
           <ArrowLeft size={18} />
         </button>
         <div className="min-w-0">
-          <p className="truncate text-base font-bold text-slate-900">{vistoria.imoveis?.codigo_imovel}</p>
+          <p className="truncate text-base font-bold text-slate-900">
+            {activeAmbiente ? activeAmbiente.ambiente : vistoria.imoveis?.codigo_imovel}
+          </p>
           <p className="truncate text-xs text-slate-500">
-            {vistoria.imoveis?.endereco}
-            {vistoria.imoveis?.bairro ? `, ${vistoria.imoveis.bairro}` : ''}
+            {activeAmbiente
+              ? vistoria.imoveis?.codigo_imovel
+              : `${vistoria.imoveis?.endereco || ''}${vistoria.imoveis?.bairro ? `, ${vistoria.imoveis.bairro}` : ''}`}
           </p>
         </div>
       </div>
 
-      <div className="card flex flex-wrap items-center justify-between gap-3 p-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{vistoria.tipo}</p>
-          <StatusBadge status={vistoria.status} />
-        </div>
-        {mapsUrl && (
-          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary !py-2 text-xs">
-            <MapPin size={14} /> Abrir no Mapa
-          </a>
-        )}
-      </div>
+      {/* ---------------------------------------------------------- */}
+      {/* NÍVEL 2 — itens do ambiente selecionado                     */}
+      {/* ---------------------------------------------------------- */}
+      {activeAmbiente ? (
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => setActiveAmbienteId(null)}
+            className="btn-secondary !py-2 text-xs"
+          >
+            <ArrowLeft size={14} /> Voltar para Lista de Ambientes
+          </button>
 
-      {visualizandoComoAdmin && (
-        <div className="card border-l-4 border-l-brand-accent p-3 text-xs text-slate-500">
-          Você está vendo esta vistoria como <strong>Administrador</strong> — o checklist normalmente é
-          preenchido pelo vistoriador responsável.
-        </div>
-      )}
-
-      {isEncerrada && (
-        <div className="card border-l-4 border-l-[#4CAF50] p-4">
-          <p className="text-sm font-semibold text-slate-800">Esta vistoria já foi encerrada.</p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            O checklist abaixo está em modo somente leitura.
-          </p>
-        </div>
-      )}
-
-      {!isEncerrada && (
-        <div className="card space-y-2 p-4">
-          <p className="label-field !mb-0">Adicionar ambiente</p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <select
-              className="input-field sm:max-w-[220px]"
-              value={novoAmbiente}
-              onChange={(e) => setNovoAmbiente(e.target.value)}
-            >
-              {AMBIENTES_PADRAO.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
-            {novoAmbiente === 'Outro' && (
-              <input
-                className="input-field"
-                placeholder="Nome do ambiente (ex: Quarto 2)"
-                value={customAmbiente}
-                onChange={(e) => setCustomAmbiente(e.target.value)}
+          <div className="space-y-3">
+            {(activeAmbiente.vistoria_itens || []).map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                readOnly={isEncerrada}
+                onSetEstado={(estado) => setItemEstado(activeAmbiente.id, item.id, estado)}
+                onUpdateObservacao={(observacao) => updateItemObservacao(activeAmbiente.id, item.id, observacao)}
+                onUploadFoto={(file) => addFotoItem(activeAmbiente.id, item.id, file)}
+                onRemoveFoto={(fotoId) => removeFotoItem(activeAmbiente.id, item.id, fotoId)}
+                onRemoveItem={() => removeItem(activeAmbiente.id, item.id)}
               />
-            )}
-            <button
-              type="button"
-              onClick={handleAddAmbiente}
-              disabled={addingAmbiente}
-              className="btn-primary shrink-0"
-            >
-              {addingAmbiente ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-              Adicionar
-            </button>
+            ))}
           </div>
-          {addAmbienteError && <p className="text-xs font-medium text-red-500">{addAmbienteError}</p>}
-        </div>
-      )}
 
-      <div className="space-y-3">
-        {ambientes.length === 0 ? (
-          <div className="card p-6 text-center text-sm text-slate-500">
-            Nenhum ambiente adicionado ainda.
-            {!isEncerrada && ' Use o seletor acima para começar o checklist.'}
+          {!isEncerrada && (
+            <div className="card space-y-2 p-4">
+              <p className="label-field !mb-0">Adicionar outro item</p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  className="input-field"
+                  placeholder="Ex: Box do banheiro, Persiana..."
+                  value={novoItemNome}
+                  onChange={(e) => setNovoItemNome(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddItemCustom}
+                  disabled={addingItem}
+                  className="btn-primary shrink-0"
+                >
+                  {addingItem ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+                  Adicionar Outro Item
+                </button>
+              </div>
+              {addItemError && <p className="text-xs font-medium text-red-500">{addItemError}</p>}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* -------------------------------------------------------- */}
+          {/* NÍVEL 1 — lista de ambientes                              */}
+          {/* -------------------------------------------------------- */}
+          <div className="card flex flex-wrap items-center justify-between gap-3 p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{vistoria.tipo}</p>
+              <StatusBadge status={vistoria.status} />
+            </div>
+            {mapsUrl && (
+              <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary !py-2 text-xs">
+                <MapPin size={14} /> Abrir no Mapa
+              </a>
+            )}
           </div>
-        ) : (
-          ambientes.map((ambiente) => (
-            <AmbienteCard
-              key={ambiente.id}
-              ambiente={ambiente}
-              readOnly={isEncerrada}
-              onSetItemEstado={setItemEstado}
-              onUpdateObservacao={updateObservacao}
-              onUploadFoto={addFoto}
-              onRemoveFoto={removeFoto}
-              onRemoveAmbiente={removeAmbiente}
-            />
-          ))
-        )}
-      </div>
+
+          {visualizandoComoAdmin && (
+            <div className="card border-l-4 border-l-brand-accent p-3 text-xs text-slate-500">
+              Você está vendo esta vistoria como <strong>Administrador</strong> — o checklist normalmente é
+              preenchido pelo vistoriador responsável.
+            </div>
+          )}
+
+          {isEncerrada && (
+            <div className="card border-l-4 border-l-[#4CAF50] p-4">
+              <p className="text-sm font-semibold text-slate-800">Esta vistoria já foi encerrada.</p>
+              <p className="mt-0.5 text-xs text-slate-500">O checklist abaixo está em modo somente leitura.</p>
+            </div>
+          )}
+
+          {!isEncerrada && (
+            <div className="card space-y-2 p-4">
+              <p className="label-field !mb-0">Adicionar ambiente</p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <select
+                  className="input-field sm:max-w-[220px]"
+                  value={novoAmbiente}
+                  onChange={(e) => setNovoAmbiente(e.target.value)}
+                >
+                  {AMBIENTES_PADRAO.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+                {novoAmbiente === 'Outro' && (
+                  <input
+                    className="input-field"
+                    placeholder="Nome do ambiente (ex: Quarto 2)"
+                    value={customAmbiente}
+                    onChange={(e) => setCustomAmbiente(e.target.value)}
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={handleAddAmbiente}
+                  disabled={addingAmbiente}
+                  className="btn-primary shrink-0"
+                >
+                  {addingAmbiente ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+                  Adicionar
+                </button>
+              </div>
+              {addAmbienteError && <p className="text-xs font-medium text-red-500">{addAmbienteError}</p>}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {ambientes.length === 0 ? (
+              <div className="card p-6 text-center text-sm text-slate-500">
+                Nenhum ambiente adicionado ainda.
+                {!isEncerrada && ' Use o seletor acima para começar o checklist.'}
+              </div>
+            ) : (
+              ambientes.map((ambiente) => (
+                <AmbienteSummaryCard
+                  key={ambiente.id}
+                  ambiente={ambiente}
+                  readOnly={isEncerrada}
+                  onVistoriar={() => setActiveAmbienteId(ambiente.id)}
+                  onRemove={isEncerrada ? null : () => handleRemoveAmbiente(ambiente.id)}
+                />
+              ))
+            )}
+          </div>
+        </>
+      )}
 
       {!isEncerrada && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white p-3 md:pl-64">

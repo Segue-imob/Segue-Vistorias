@@ -100,22 +100,26 @@ alter table public.vistorias enable row level security;
 -- profiles: todos autenticados podem listar (necessário para o
 -- select de "vistoriador responsável" e para a Sidebar), mas só
 -- Administrador cria/edita/remove usuários.
+drop policy if exists "Autenticados leem profiles" on public.profiles;
 create policy "Autenticados leem profiles"
   on public.profiles for select
   to authenticated
   using (true);
 
+drop policy if exists "Somente admin cria profiles" on public.profiles;
 create policy "Somente admin cria profiles"
   on public.profiles for insert
   to authenticated
   with check (public.is_admin());
 
+drop policy if exists "Somente admin atualiza profiles" on public.profiles;
 create policy "Somente admin atualiza profiles"
   on public.profiles for update
   to authenticated
   using (public.is_admin())
   with check (public.is_admin());
 
+drop policy if exists "Somente admin remove profiles" on public.profiles;
 create policy "Somente admin remove profiles"
   on public.profiles for delete
   to authenticated
@@ -123,28 +127,33 @@ create policy "Somente admin remove profiles"
 
 -- imoveis: leitura liberada (todo perfil precisa ver dados do imóvel
 -- vinculado às vistorias); cadastro por Administrador ou Gestão.
+drop policy if exists "Autenticados leem imoveis" on public.imoveis;
 create policy "Autenticados leem imoveis"
   on public.imoveis for select
   to authenticated
   using (true);
 
+drop policy if exists "Admin e gestao cadastram imoveis" on public.imoveis;
 create policy "Admin e gestao cadastram imoveis"
   on public.imoveis for insert
   to authenticated
   with check (public.is_admin() or public.is_gestao());
 
+drop policy if exists "Admin e gestao atualizam imoveis" on public.imoveis;
 create policy "Admin e gestao atualizam imoveis"
   on public.imoveis for update
   to authenticated
   using (public.is_admin() or public.is_gestao())
   with check (public.is_admin() or public.is_gestao());
 
+drop policy if exists "Somente admin remove imoveis" on public.imoveis;
 create policy "Somente admin remove imoveis"
   on public.imoveis for delete
   to authenticated
   using (public.is_admin());
 
 -- vistorias: Administrador e Gestão veem tudo; Vistoriador só as suas.
+drop policy if exists "Leitura por hierarquia de role" on public.vistorias;
 create policy "Leitura por hierarquia de role"
   on public.vistorias for select
   to authenticated
@@ -154,6 +163,7 @@ create policy "Leitura por hierarquia de role"
     or vistoriador_id = auth.uid()
   );
 
+drop policy if exists "Admin e gestao agendam vistorias" on public.vistorias;
 create policy "Admin e gestao agendam vistorias"
   on public.vistorias for insert
   to authenticated
@@ -162,6 +172,7 @@ create policy "Admin e gestao agendam vistorias"
 -- Administrador atualiza qualquer vistoria (qualquer status, inclusive
 -- cancelar). Vistoriador só atualiza a própria vistoria (usado para
 -- Aceitar -> aceita e Finalizar -> finalizada).
+drop policy if exists "Atualizacao por hierarquia de role" on public.vistorias;
 create policy "Atualizacao por hierarquia de role"
   on public.vistorias for update
   to authenticated
@@ -174,6 +185,7 @@ create policy "Atualizacao por hierarquia de role"
     or (public.is_vistoriador() and vistoriador_id = auth.uid())
   );
 
+drop policy if exists "Somente admin remove vistorias" on public.vistorias;
 create policy "Somente admin remove vistorias"
   on public.vistorias for delete
   to authenticated
@@ -242,28 +254,33 @@ as $$
 $$;
 
 -- vistoria_ambientes
+drop policy if exists "Le ambientes por hierarquia de role" on public.vistoria_ambientes;
 create policy "Le ambientes por hierarquia de role"
   on public.vistoria_ambientes for select
   to authenticated
   using (public.is_admin() or public.is_gestao() or public.owns_vistoria(vistoria_id));
 
+drop policy if exists "Vistoriador cria ambientes da propria vistoria" on public.vistoria_ambientes;
 create policy "Vistoriador cria ambientes da propria vistoria"
   on public.vistoria_ambientes for insert
   to authenticated
   with check (public.owns_vistoria(vistoria_id));
 
+drop policy if exists "Vistoriador atualiza ambientes da propria vistoria" on public.vistoria_ambientes;
 create policy "Vistoriador atualiza ambientes da propria vistoria"
   on public.vistoria_ambientes for update
   to authenticated
   using (public.owns_vistoria(vistoria_id))
   with check (public.owns_vistoria(vistoria_id));
 
+drop policy if exists "Vistoriador remove ambientes da propria vistoria" on public.vistoria_ambientes;
 create policy "Vistoriador remove ambientes da propria vistoria"
   on public.vistoria_ambientes for delete
   to authenticated
   using (public.owns_vistoria(vistoria_id));
 
 -- vistoria_itens (checa o dono via join com vistoria_ambientes)
+drop policy if exists "Le itens por hierarquia de role" on public.vistoria_itens;
 create policy "Le itens por hierarquia de role"
   on public.vistoria_itens for select
   to authenticated
@@ -274,6 +291,7 @@ create policy "Le itens por hierarquia de role"
     )
   );
 
+drop policy if exists "Vistoriador cria itens da propria vistoria" on public.vistoria_itens;
 create policy "Vistoriador cria itens da propria vistoria"
   on public.vistoria_itens for insert
   to authenticated
@@ -281,18 +299,21 @@ create policy "Vistoriador cria itens da propria vistoria"
     exists (select 1 from public.vistoria_ambientes a where a.id = ambiente_id and public.owns_vistoria(a.vistoria_id))
   );
 
+drop policy if exists "Vistoriador atualiza itens da propria vistoria" on public.vistoria_itens;
 create policy "Vistoriador atualiza itens da propria vistoria"
   on public.vistoria_itens for update
   to authenticated
   using (exists (select 1 from public.vistoria_ambientes a where a.id = ambiente_id and public.owns_vistoria(a.vistoria_id)))
   with check (exists (select 1 from public.vistoria_ambientes a where a.id = ambiente_id and public.owns_vistoria(a.vistoria_id)));
 
+drop policy if exists "Vistoriador remove itens da propria vistoria" on public.vistoria_itens;
 create policy "Vistoriador remove itens da propria vistoria"
   on public.vistoria_itens for delete
   to authenticated
   using (exists (select 1 from public.vistoria_ambientes a where a.id = ambiente_id and public.owns_vistoria(a.vistoria_id)));
 
 -- vistoria_fotos (mesma regra)
+drop policy if exists "Le fotos por hierarquia de role" on public.vistoria_fotos;
 create policy "Le fotos por hierarquia de role"
   on public.vistoria_fotos for select
   to authenticated
@@ -303,6 +324,7 @@ create policy "Le fotos por hierarquia de role"
     )
   );
 
+drop policy if exists "Vistoriador anexa fotos da propria vistoria" on public.vistoria_fotos;
 create policy "Vistoriador anexa fotos da propria vistoria"
   on public.vistoria_fotos for insert
   to authenticated
@@ -310,6 +332,7 @@ create policy "Vistoriador anexa fotos da propria vistoria"
     exists (select 1 from public.vistoria_ambientes a where a.id = ambiente_id and public.owns_vistoria(a.vistoria_id))
   );
 
+drop policy if exists "Vistoriador remove fotos da propria vistoria" on public.vistoria_fotos;
 create policy "Vistoriador remove fotos da propria vistoria"
   on public.vistoria_fotos for delete
   to authenticated
@@ -318,29 +341,32 @@ create policy "Vistoriador remove fotos da propria vistoria"
 -- ============================================================
 -- Storage: bucket público para fotos do checklist e para a
 -- assinatura digital de encerramento (ambos ficam em
--- "vistoria-fotos/<vistoria_id>/...").
+-- "vistorias-fotos/<vistoria_id>/...").
 -- Se o SQL Editor do seu projeto não tiver permissão para alterar
 -- o schema "storage", crie o bucket pelo Dashboard (Storage > New
--- bucket > "vistoria-fotos", marcado como público) e aplique as
+-- bucket > "vistorias-fotos", marcado como público) e aplique as
 -- policies abaixo manualmente em Storage > Policies.
 -- ============================================================
 insert into storage.buckets (id, name, public)
-values ('vistoria-fotos', 'vistoria-fotos', true)
+values ('vistorias-fotos', 'vistorias-fotos', true)
 on conflict (id) do nothing;
 
-create policy "Leitura publica de vistoria-fotos"
+drop policy if exists "Leitura publica de vistorias-fotos" on storage.objects;
+create policy "Leitura publica de vistorias-fotos"
   on storage.objects for select
-  using (bucket_id = 'vistoria-fotos');
+  using (bucket_id = 'vistorias-fotos');
 
-create policy "Autenticados enviam para vistoria-fotos"
+drop policy if exists "Autenticados enviam para vistorias-fotos" on storage.objects;
+create policy "Autenticados enviam para vistorias-fotos"
   on storage.objects for insert
   to authenticated
-  with check (bucket_id = 'vistoria-fotos');
+  with check (bucket_id = 'vistorias-fotos');
 
-create policy "Autenticados removem de vistoria-fotos"
+drop policy if exists "Autenticados removem de vistorias-fotos" on storage.objects;
+create policy "Autenticados removem de vistorias-fotos"
   on storage.objects for delete
   to authenticated
-  using (bucket_id = 'vistoria-fotos');
+  using (bucket_id = 'vistorias-fotos');
 
 -- ============================================================
 -- Editar / Excluir vistoria (Agenda, Kanban, Listagem)
@@ -390,3 +416,50 @@ create policy "Leitura por hierarquia de role"
     or vistoriador_id = auth.uid()
     or criado_por = auth.uid()
   );
+
+-- ============================================================
+-- Checklist em 2 níveis (Ambientes -> Itens), com observação e foto
+-- por ITEM (antes eram por ambiente), itens padrão carregados na
+-- hora do "+ Adicionar" ambiente (12 itens: Piso, Rodapé, Parede,
+-- Teto, Porta, Janela, Interruptores e Tomadas, Luminária, Armário,
+-- Bancada da Pia, Torneira, Tanque), "+ Adicionar Outro Item" para
+-- personalizados, e snapshot da estrutura completa salvo a cada
+-- alteração em vistorias.laudo_preenchido.
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+
+-- Observação passa a existir por item.
+alter table public.vistoria_itens add column if not exists observacao text;
+
+-- Item pode existir sem avaliação ainda (carregado automaticamente
+-- ao criar o ambiente, com estado = null até o vistoriador escolher).
+alter table public.vistoria_itens alter column estado drop not null;
+
+-- A unicidade por nome não faz mais sentido: os itens agora são
+-- criados como linhas próprias (não via upsert por nome), e itens
+-- personalizados podem coincidir de nome com os padrão ou entre si.
+alter table public.vistoria_itens drop constraint if exists vistoria_itens_ambiente_id_item_key;
+
+-- Fotos passam a poder ser vinculadas a um item específico. ambiente_id
+-- continua obrigatório (preenchido junto no INSERT), então as policies
+-- de RLS de vistoria_fotos já existentes continuam valendo sem mudança.
+alter table public.vistoria_fotos add column if not exists item_id uuid references public.vistoria_itens (id) on delete cascade;
+create index if not exists idx_vistoria_fotos_item on public.vistoria_fotos (item_id);
+
+-- Snapshot da estrutura completa do laudo (ambientes -> itens -> fotos),
+-- sincronizado a cada alteração pelo front-end — útil para consulta ou
+-- exportação rápida sem precisar recompor os joins.
+alter table public.vistorias add column if not exists laudo_preenchido jsonb;
+
+-- ------------------------------------------------------------
+-- Limpeza: se você já rodou uma versão anterior deste script, ela
+-- criou o bucket/policies com o nome singular "vistoria-fotos". O
+-- bloco de Storage acima já foi atualizado para "vistorias-fotos"
+-- (plural) — isso aqui só remove as policies antigas com o nome
+-- singular, caso existam, pra não ficarem órfãs. Se o bucket
+-- "vistoria-fotos" (singular) também existir, pode remover
+-- manualmente pelo Dashboard se não for mais usado.
+-- ------------------------------------------------------------
+drop policy if exists "Leitura publica de vistoria-fotos" on storage.objects;
+drop policy if exists "Autenticados enviam para vistoria-fotos" on storage.objects;
+drop policy if exists "Autenticados removem de vistoria-fotos" on storage.objects;

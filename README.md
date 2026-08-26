@@ -63,14 +63,17 @@ Disponível nos três lugares onde uma vistoria aparece como card/linha — **Ag
 
 ## Execução de vistoria (checklist do Vistoriador)
 
+O fluxo de campo do Vistoriador é uma navegação em **2 níveis**:
 
+- **Nível 1 — Ambientes**: cards com o nome do ambiente, barra de progresso e "X/Y itens avaliados", botão **Vistoriar Ambiente**. O seletor "+ Adicionar" ambiente (Sala, Cozinha, Quarto, Banheiro, Varanda ou "Outro" customizado) já carrega, na hora, os **12 itens padrão** como linhas reais no banco — é por isso que o card nasce mostrando "0/12" mesmo antes de entrar nele.
+- **Nível 2 — Itens do ambiente**: ao tocar em "Vistoriar Ambiente", a tela troca para a lista de itens daquele ambiente (Piso, Rodapé, Parede, Teto, Porta, Janela, Interruptores e Tomadas, Luminária, Armário, Bancada da Pia, Torneira, Tanque), cada um com seletor de estado (`Bom`/`Regular`/`Avariado`/`Ausente`), campo de observação e upload de foto **por item** (não mais por ambiente). O botão **+ Adicionar Outro Item** cria itens personalizados na hora. **← Voltar para Lista de Ambientes** retorna ao Nível 1.
 
-O fluxo completo de campo do Vistoriador precisou de 3 tabelas novas — rode novamente `supabase/schema.sql` (é idempotente) para criá-las:
+Tabelas envolvidas — rode novamente `supabase/schema.sql` (é idempotente) para aplicar:
 
-- `vistoria_ambientes` — um ambiente vistoriado (`vistoria_id`, `ambiente`, `observacao`).
-- `vistoria_itens` — o estado de cada item dentro de um ambiente (`ambiente_id`, `item`, `estado` — `bom`/`regular`/`avariado`/`ausente`; único por `(ambiente_id, item)`).
-- `vistoria_fotos` — fotos anexadas a um ambiente (`ambiente_id`, `url`).
-- `vistorias` ganhou duas colunas novas: `assinatura_url` (URL da assinatura no Storage) e `finalizada_em`.
+- `vistoria_ambientes` — um ambiente vistoriado (`vistoria_id`, `ambiente`).
+- `vistoria_itens` — cada item de um ambiente (`ambiente_id`, `item`, `estado` — agora **opcional**, `null` até ser avaliado —, `observacao`). Não tem mais unicidade por nome: itens são linhas próprias, criadas de verdade ao adicionar o ambiente (os 12 padrão) ou via "+ Adicionar Outro Item".
+- `vistoria_fotos` — ganhou a coluna `item_id` (além de `ambiente_id`, que continua obrigatório): cada foto agora se vincula a um item específico.
+- `vistorias` ganhou `assinatura_url`, `finalizada_em` e `laudo_preenchido` (jsonb) — este último recebe, **a cada alteração no checklist**, um snapshot JSON da estrutura completa (ambientes → itens → fotos), útil para consulta/exportação sem precisar recompor os joins. Essa sincronização roda em segundo plano (efeito colateral "melhor esforço": se falhar, só avisa no console, nunca trava a tela).
 
 ### "column vistorias.X does not exist" mesmo depois de rodar o `ALTER TABLE`
 
@@ -81,17 +84,19 @@ notify pgrst, 'reload schema';
 ```
 Rode isso no SQL Editor logo depois de qualquer `ALTER TABLE`/`CREATE TABLE`. Alternativa: Project Settings → API → Restart project.
 
-Por segurança contra esse tipo de dessincronia, as consultas de `vistorias` em `useVistorias.js` e `useVistoriaExecucao.js` agora usam `select('*', imoveis: ..., vistoriador: ...)` em vez de listar cada coluna — assim, colunas que ainda não existem (ou que existem mas o front não conhece) nunca quebram o carregamento da página; o que existir de fato na tabela é o que volta na resposta.
+Por segurança contra esse tipo de dessincronia, as consultas de `vistorias` em `useVistorias.js` e `useVistoriaExecucao.js` usam `select('*', imoveis: ..., vistoriador: ...)` em vez de listar cada coluna — assim, colunas que ainda não existem (ou que existem mas o front não conhece) nunca quebram o carregamento da página.
 
-> Nota: se você criou também `fotos_urls`, `observacoes_finais` ou `laudo_preenchido` em `vistorias`, saiba que o app **não usa essas colunas** — o checklist (fotos, observações, itens por estado) é modelado nas tabelas relacionais `vistoria_ambientes` / `vistoria_itens` / `vistoria_fotos` descritas acima, uma linha por ambiente/item/foto. Elas continuam existindo na tabela sem problema (o `select('*')` só as ignora na prática, já que nada na UI as lê), mas não duplicam dado nenhum.
+> Nota: se você criou também `fotos_urls` ou `observacoes_finais` em `vistorias` numa tentativa anterior, saiba que o app **não usa essas duas colunas** — fotos e observações vivem em `vistoria_fotos`/`vistoria_itens` (uma linha por foto/item). `laudo_preenchido`, por outro lado, **é usado** (veja acima). As colunas não usadas não atrapalham nada existindo, só ficam vazias.
 
-Também é criado um **bucket de Storage público chamado `vistoria-fotos`** (fotos do checklist e a assinatura digital ficam em `vistoria-fotos/<vistoria_id>/...`). Se o SQL Editor do seu projeto não tiver permissão para alterar o schema `storage`, crie o bucket manualmente pelo Dashboard (Storage → New bucket → `vistoria-fotos`, público) e aplique as 3 policies do fim do `schema.sql` em Storage → Policies.
+### Bucket de Storage: `vistorias-fotos` (plural)
+
+Fotos do checklist e a assinatura digital ficam em `vistorias-fotos/<vistoria_id>/...`. **Esse nome mudou** — versões anteriores deste projeto usavam `vistoria-fotos` (singular) por engano; se você já tinha criado o bucket assim, ele fica órfão e sem uso (pode remover pelo Dashboard). Se o SQL Editor do seu projeto não tiver permissão para alterar o schema `storage`, crie o bucket manualmente (Storage → New bucket → `vistorias-fotos`, público) e aplique as 3 policies da seção de Storage do `schema.sql`.
 
 **Arquitetura no front-end:**
-- `src/lib/vistoriaExecucao.js` — constantes (`AMBIENTES_PADRAO`, `ITENS_PADRAO`, `ESTADOS_ITEM`) e `buildMapsUrl()`.
-- `src/hooks/useVistoriaExecucao.js` — carrega a vistoria + ambientes/itens/fotos e expõe `addAmbiente`, `removeAmbiente`, `updateObservacao`, `setItemEstado`, `addFoto`, `removeFoto`, `finalizarVistoria`. Cada ação já grava direto no Supabase (sem botão de "salvar rascunho" — o progresso nunca fica só na memória).
-- `src/components/execucao/` — `AmbienteCard` (checklist do ambiente), `ItemEstadoSelector` (seletor de 4 estados), `FotoUploader` (upload com atalho de câmera via `capture="environment"`), `SignatureCanvas` (assinatura em `<canvas>`, mouse + toque) e `FinalizarVistoriaModal` (resumo + assinatura + confirmação).
-- `src/pages/VistoriaExecucao.jsx` — junta tudo na rota `/minhas-vistorias/:id`; quando a vistoria já está `finalizada`/`cancelada`, o checklist abre em modo somente leitura.
+- `src/lib/vistoriaExecucao.js` — constantes (`AMBIENTES_PADRAO`, `ITENS_PADRAO` com os 12 itens, `ESTADOS_ITEM`, `FOTOS_BUCKET`) e `buildMapsUrl()`.
+- `src/hooks/useVistoriaExecucao.js` — carrega a vistoria + ambientes/itens/fotos e expõe `addAmbiente` (já cria os 12 itens padrão junto), `removeAmbiente`, `addItemCustom`, `removeItem`, `setItemEstado`, `updateItemObservacao`, `addFotoItem`, `removeFotoItem`, `finalizarVistoria`. Cada ação grava direto no Supabase (sem botão de "salvar rascunho") e dispara a sincronização de `laudo_preenchido`.
+- `src/components/execucao/` — `AmbienteSummaryCard` (card do Nível 1, com progresso), `ItemCard` (card do Nível 2, um por item — estado + observação + fotos), `ItemEstadoSelector`, `FotoUploader` (atalho de câmera via `capture="environment"`), `SignatureCanvas` (assinatura em `<canvas>`, mouse + toque) e `FinalizarVistoriaModal` (resumo por item + assinatura + confirmação).
+- `src/pages/VistoriaExecucao.jsx` — junta tudo na rota `/minhas-vistorias/:id`, controlando qual nível está ativo (`activeAmbienteId`); quando a vistoria já está `finalizada`/`cancelada`, o checklist abre em modo somente leitura nos dois níveis.
 
 ## Gerenciamento de usuários (Administrador)
 

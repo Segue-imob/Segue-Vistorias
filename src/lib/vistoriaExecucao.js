@@ -6,7 +6,27 @@
 // nomear ambientes repetidos (ex.: "Quarto 1", "Quarto 2").
 export const AMBIENTES_PADRAO = ['Sala', 'Cozinha', 'Quarto', 'Banheiro', 'Varanda', 'Outro']
 
-export const ITENS_PADRAO = ['Piso', 'Parede', 'Teto', 'Portas', 'Janelas', 'Tomadas/Interruptores']
+// Itens padrão carregados automaticamente ao criar um ambiente. O
+// vistoriador ainda pode adicionar itens personalizados por cima
+// desses com "+ Adicionar Outro Item".
+export const ITENS_PADRAO = [
+  'Piso',
+  'Rodapé',
+  'Parede',
+  'Teto',
+  'Porta',
+  'Janela',
+  'Interruptores e Tomadas',
+  'Luminária',
+  'Armário',
+  'Bancada da Pia',
+  'Torneira',
+  'Tanque'
+]
+
+// Bucket de Storage onde ficam as fotos do checklist e a assinatura
+// digital de encerramento.
+export const FOTOS_BUCKET = 'vistorias-fotos'
 
 // Estados possíveis para cada item vistoriado. Cores propositalmente
 // diferentes da paleta de STATUS da vistoria (src/lib/constants.js)
