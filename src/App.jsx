@@ -1,8 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import RequireAuth from './components/RequireAuth'
 import FullscreenLoader from './components/FullscreenLoader'
-import AccessMessage from './components/AccessMessage'
+import Login from './pages/Login'
 import Agenda from './pages/Agenda'
 import Vistorias from './pages/Vistorias'
 import MinhasVistorias from './pages/MinhasVistorias'
@@ -11,34 +12,44 @@ import SemAcesso from './pages/SemAcesso'
 import { useAuth } from './context/AuthContext'
 import { getHomeRouteForRole } from './lib/permissions'
 
+// Home varia por perfil: Administrador/Gestão caem na Agenda,
+// Vistoriador cai em "Minhas Vistorias", e quem não tem role
+// reconhecido em profiles.role cai em /sem-acesso.
+function HomeRedirect() {
+  const { role } = useAuth()
+  return <Navigate to={getHomeRouteForRole(role)} replace />
+}
+
 export default function App() {
-  const { session, role, loading } = useAuth()
+  const { loading } = useAuth()
 
-  // Sessão/perfil ainda carregando — evita "piscar" a tela errada.
+  // Sessão/perfil ainda carregando — evita "piscar" a tela errada
+  // (login vs. app) enquanto o Supabase resolve a sessão.
   if (loading) return <FullscreenLoader />
-
-  // Sem sessão do Supabase Auth: este pacote não inclui a tela de login,
-  // ela deve rodar antes do usuário chegar aqui (veja README).
-  if (!session) {
-    return (
-      <AccessMessage
-        title="Sessão não encontrada"
-        description="Faça login para acessar o SEGUE Vistorias."
-      />
-    )
-  }
-
-  // Home varia por perfil: Administrador/Gestão caem na Agenda,
-  // Vistoriador cai em "Minhas Vistorias", e quem não tem role
-  // reconhecido em profiles.role cai em /sem-acesso.
-  const homeRoute = getHomeRouteForRole(role)
 
   return (
     <Routes>
-      <Route path="/sem-acesso" element={<SemAcesso />} />
+      {/* Rota pública — tela de login split-screen */}
+      <Route path="/login" element={<Login />} />
 
-      <Route element={<Layout />}>
-        <Route index element={<Navigate to={homeRoute} replace />} />
+      <Route
+        path="/sem-acesso"
+        element={
+          <RequireAuth>
+            <SemAcesso />
+          </RequireAuth>
+        }
+      />
+
+      {/* Todo o app protegido por sessão válida; sem sessão -> /login */}
+      <Route
+        element={
+          <RequireAuth>
+            <Layout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<HomeRedirect />} />
 
         <Route
           path="/agenda"
@@ -73,7 +84,7 @@ export default function App() {
           }
         />
 
-        <Route path="*" element={<Navigate to={homeRoute} replace />} />
+        <Route path="*" element={<HomeRedirect />} />
       </Route>
     </Routes>
   )

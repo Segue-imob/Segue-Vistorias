@@ -4,10 +4,18 @@ Painel de gestão de vistorias para a **SEGUE Imobiliária** — React + Tailwin
 
 ## Telas
 
+- **Login (`/login`)** — split-screen: formulário de acesso à esquerda (e-mail/senha via `supabase.auth.signInWithPassword`) e apresentação do produto à direita. Rota pública; redireciona para `/` após login bem-sucedido, e para `/login` sempre que não houver sessão válida.
 - **Agenda** — calendário mensal com badges de vistorias coloridas por status, painel do dia selecionado, filtros por vistoriador/tipo e botão "Agendar Vistoria". Acesso: Administrador e Gestão.
 - **Vistorias** — listagem com busca (código, endereço, bairro, cidade, inquilino/proprietário), alternância Lista ↔ Kanban (drag and drop entre colunas) e botão "+ Agendar Vistoria". Acesso: Administrador.
 - **Minhas Vistorias** — painel do Vistoriador com só as vistorias atribuídas a ele, com ações "Aceitar vistoria" e "Finalizar vistoria". Acesso: Vistoriador.
 - **Usuários** — tabela de equipe com cadastro/edição e toggle Ativo/Inativo. Acesso: Administrador.
+
+## Autenticação e sessão
+
+- `src/pages/Login.jsx` — tela split-screen. Chama `supabase.auth.signInWithPassword({ email, password })`; em caso de erro mostra uma mensagem amigável em vermelho; em caso de sucesso navega para `/`, e `App.jsx` decide a rota final de acordo com o `role` do usuário. Se o usuário já tiver sessão válida e cair em `/login` por engano, é redirecionado automaticamente.
+- `src/components/RequireAuth.jsx` — protege todas as rotas internas (Agenda, Vistorias, Minhas Vistorias, Usuários, Sem Acesso): sem sessão válida, redireciona para `/login` guardando a rota de origem.
+- `src/components/ProtectedRoute.jsx` — camada extra dentro de cada rota já autenticada: verifica se o `role` tem a permissão daquela página (ver seção abaixo) e redireciona para `/sem-acesso` caso não tenha.
+- O botão **Sair** no rodapé da Sidebar chama `supabase.auth.signOut()`; a sessão cai, `RequireAuth` detecta e redireciona para `/login` automaticamente.
 
 ## Hierarquia de permissões (role)
 
@@ -69,11 +77,11 @@ npm run dev
 
 ```
 src/
-  components/     # Sidebar, Layout, ProtectedRoute, Modal, Calendar, KanbanBoard, StatusBadge...
+  components/     # Sidebar, Layout, RequireAuth, ProtectedRoute, Modal, Calendar, KanbanBoard, StatusBadge...
   context/        # AuthContext.jsx (sessão Supabase + profiles.role)
   hooks/          # useVistorias, useImoveis, useProfiles (Supabase + Realtime)
   lib/            # supabaseClient.js, constants.js, permissions.js, navItems.js, realtimeChannel.js
-  pages/          # Agenda.jsx, Vistorias.jsx, MinhasVistorias.jsx, Usuarios.jsx, SemAcesso.jsx
+  pages/          # Login.jsx, Agenda.jsx, Vistorias.jsx, MinhasVistorias.jsx, Usuarios.jsx, SemAcesso.jsx
 supabase/
   schema.sql      # DDL de referência (tabelas, RLS por role, realtime)
 ```
@@ -82,5 +90,5 @@ supabase/
 
 - **Realtime (canal único)**: para evitar o erro `cannot add postgres_changes callbacks ... after subscribe()` — que acontece quando mais de um componente monta o mesmo hook ao mesmo tempo — todo o Realtime do app passa por **um único canal singleton** em `src/lib/realtimeChannel.js`, chamado `schema-db-changes`. Esse módulo registra **todos** os `.on('postgres_changes', ...)` (para `profiles`, `vistorias` e `imoveis`) **antes** do único `.subscribe()` da cadeia, e expõe `subscribeToTable(table, callback)` para que os hooks apenas "assinem" eventos sem criar canais próprios.
 - **"Deletar" vistoria**: por padrão o botão de status "Cancelada" faz um soft-delete (`status = 'cancelada'`), preservando histórico. Ajuste `useVistorias.deleteVistoria` se preferir exclusão física (`.delete()`).
-- **Autenticação**: o app assume que o login (Supabase Auth) já existe/roda antes do usuário chegar aqui — `AuthContext` só lê a sessão já criada. Não há tela de login neste pacote; se não houver sessão, o app mostra uma mensagem pedindo login. O `LogOut` no rodapé da Sidebar já chama `supabase.auth.signOut()`.
+- **Autenticação**: `src/pages/Login.jsx` + `src/components/RequireAuth.jsx` cobrem o fluxo completo (login, redirecionamento pós-login, proteção de rota, logout). Não é necessário nenhum outro pacote de auth — tudo usa `supabase.auth` diretamente.
 - **Perfil sem role reconhecido**: se `profiles.role` estiver vazio ou não bater com nenhum alias conhecido, o usuário é redirecionado para `/sem-acesso` com uma explicação — não fica preso numa tela em branco.
