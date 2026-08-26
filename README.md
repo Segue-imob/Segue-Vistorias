@@ -9,7 +9,7 @@ Painel de gestão de vistorias para a **SEGUE Imobiliária** — React + Tailwin
 - **Vistorias** — listagem com busca (código, endereço, bairro, cidade, inquilino/proprietário), alternância Lista ↔ Kanban (drag and drop entre colunas) e botão "+ Agendar Vistoria". Acesso: Administrador.
 - **Minhas Vistorias (`/minhas-vistorias`)** — painel mobile-first do Vistoriador, com abas **Novas** (aguardando aceite), **Em Andamento** e **Concluídas**. Cada card tem "Abrir no Mapa" (Google Maps a partir do endereço do imóvel) e, nas Novas, "Aceitar Vistoria". Acesso: Vistoriador.
 - **Execução de Vistoria (`/minhas-vistorias/:id`)** — checklist ambiente por ambiente (Sala, Cozinha, Quarto, Banheiro, Varanda ou nome customizado), com 6 itens por ambiente (Piso, Parede, Teto, Portas, Janelas, Tomadas/Interruptores) avaliados como Bom/Regular/Avariado/Ausente, observação em texto e upload de fotos (com atalho direto para a câmera no celular). Botão fixo "Finalizar Vistoria" abre um modal de encerramento com resumo do checklist, assinatura digital em canvas e o botão "Finalizar e Salvar Vistoria", que grava a assinatura no Storage e muda o status para `finalizada`. Acesso: Vistoriador.
-- **Usuários** — tabela de equipe com cadastro/edição e toggle Ativo/Inativo. Acesso: Administrador.
+- **Usuários** — tabela de equipe com cadastro completo (Auth + `profiles`, com senha), edição de perfil e redefinição de senha via menu de ações, e toggle Ativo/Inativo. Acesso: Administrador.
 
 ## Autenticação e sessão
 
@@ -69,6 +69,31 @@ Também é criado um **bucket de Storage público chamado `vistoria-fotos`** (fo
 - `src/components/execucao/` — `AmbienteCard` (checklist do ambiente), `ItemEstadoSelector` (seletor de 4 estados), `FotoUploader` (upload com atalho de câmera via `capture="environment"`), `SignatureCanvas` (assinatura em `<canvas>`, mouse + toque) e `FinalizarVistoriaModal` (resumo + assinatura + confirmação).
 - `src/pages/VistoriaExecucao.jsx` — junta tudo na rota `/minhas-vistorias/:id`; quando a vistoria já está `finalizada`/`cancelada`, o checklist abre em modo somente leitura.
 
+## Gerenciamento de usuários (Administrador)
+
+A aba **Usuários** cadastra, edita e redefine senha de membros da equipe direto pelo app, sem precisar abrir o painel do Supabase. Isso exige duas **Edge Functions**, porque criar um usuário com senha em Supabase Auth só pode ser feito de duas formas:
+
+- `supabase.auth.signUp()` no navegador — **não usamos essa opção**: ela troca a sessão do navegador para a do usuário recém-criado, ou seja, o Administrador seria deslogado a cada cadastro.
+- `supabase.auth.admin.createUser()` — exige a **service_role key**, que nunca pode ir para o código do front-end (ela ignora todo o RLS; se vazasse no bundle do site, qualquer visitante teria acesso total ao banco).
+
+A solução: as duas ações rodam em **Supabase Edge Functions** (servidor, com a service_role key protegida como variável de ambiente que o Supabase já injeta automaticamente — não precisa configurar nada manualmente):
+
+- `supabase/functions/admin-create-user` — cria o usuário em Auth (`auth.admin.createUser`) e a linha em `profiles` na sequência; se o `profiles` falhar, desfaz a criação em Auth (rollback). Retorna `"Este e-mail já está cadastrado."` quando o e-mail já existe.
+- `supabase/functions/admin-reset-password` — redefine a senha de um usuário existente (`auth.admin.updateUserById`), acionado pelo item **Alterar senha** no menu de ações (ícone `⋮`) de cada linha da tabela.
+- `supabase/functions/_shared/admin.ts` — helpers compartilhados: monta os dois clientes Supabase (um autenticado como quem chamou, outro com a service_role) e confirma que quem chamou é, de fato, um Administrador — checagem redundante com o RLS, mas que já barra a chamada antes de tocar no banco.
+
+**Deploy das functions** (com o [Supabase CLI](https://supabase.com/docs/guides/cli) instalado e logado):
+
+```bash
+supabase link --project-ref SEU_PROJECT_REF
+supabase functions deploy admin-create-user
+supabase functions deploy admin-reset-password
+```
+
+Não é preciso configurar `SUPABASE_URL`, `SUPABASE_ANON_KEY` ou `SUPABASE_SERVICE_ROLE_KEY` manualmente — o Supabase já disponibiliza essas três variáveis automaticamente dentro de toda Edge Function do projeto.
+
+No front-end, `src/hooks/useProfiles.js` expõe `createUserWithAuth(payload)` e `resetUserPassword(userId, password)`, que chamam essas functions via `supabase.functions.invoke(...)` e traduzem o corpo de erro da resposta (`error.context`) para uma mensagem legível — é daí que vêm os alertas "Usuário cadastrado com sucesso!", "Senha atualizada com sucesso!" e "Este e-mail já está cadastrado." na tela.
+
 ## Paleta oficial de status
 
 | Status      | Cor       |
@@ -82,11 +107,13 @@ Definida em `src/lib/constants.js` (`STATUS`) — única fonte de verdade usada 
 
 ## 1. Configurar o Supabase
 
-Rode o script `supabase/schema.sql` no **SQL Editor** do seu projeto Supabase. Ele cria as tabelas `profiles`, `imoveis`, `vistorias` com os nomes de coluna que o front-end espera, habilita Realtime e cria as policies de RLS por role. Se as tabelas já existirem, confira se os nomes de coluna batem — o front consome:
+Rode o script `supabase/schema.sql` no **SQL Editor** do seu projeto Supabase. Ele cria as tabelas `profiles`, `imoveis`, `vistorias` (+ tabelas do checklist de vistoria) com os nomes de coluna que o front-end espera, habilita Realtime e cria as policies de RLS por role. Se as tabelas já existirem, confira se os nomes de coluna batem — o front consome:
 
 - `profiles`: `id, nome, email, telefone, role, ativo, created_at`
 - `imoveis`: `id, codigo_imovel, endereco, bairro, cidade, proprietario_nome, inquilino_nome`
-- `vistorias`: `id, imovel_id, vistoriador_id, tipo, status, data_agendamento, observacoes`
+- `vistorias`: `id, imovel_id, vistoriador_id, tipo, status, data_agendamento, observacoes, assinatura_url, finalizada_em`
+
+Depois, faça o deploy das Edge Functions de gerenciamento de usuários (veja a seção "Gerenciamento de usuários" abaixo) — sem isso, a aba Usuários não consegue cadastrar novas contas.
 
 ## 2. Rodar localmente
 
@@ -110,7 +137,8 @@ npm run dev
 
 ```
 src/
-  components/     # Sidebar, Layout, RequireAuth, ProtectedRoute, Modal, Calendar, KanbanBoard, StatusBadge...
+  components/     # Sidebar, Layout, RequireAuth, ProtectedRoute, Modal, Calendar, KanbanBoard, StatusBadge,
+                   # PasswordField, SuccessBanner, UsuarioModal, ResetPasswordModal...
   components/execucao/  # AmbienteCard, ItemEstadoSelector, FotoUploader, SignatureCanvas, FinalizarVistoriaModal
   context/        # AuthContext.jsx (sessão Supabase + profiles.role)
   hooks/          # useVistorias, useImoveis, useProfiles, useVistoriaExecucao (Supabase + Realtime)
@@ -118,6 +146,10 @@ src/
   pages/          # Login.jsx, Agenda.jsx, Vistorias.jsx, MinhasVistorias.jsx, VistoriaExecucao.jsx, Usuarios.jsx, SemAcesso.jsx
 supabase/
   schema.sql      # DDL de referência (tabelas, RLS por role, realtime, checklist de vistoria, storage)
+  functions/
+    admin-create-user/    # Edge Function: cria usuário em Auth + profiles (service role)
+    admin-reset-password/ # Edge Function: redefine senha de um usuário (service role)
+    _shared/admin.ts       # helpers compartilhados pelas duas functions
 ```
 
 ## Notas de implementação

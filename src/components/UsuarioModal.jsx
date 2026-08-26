@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import Modal from './Modal'
+import PasswordField from './PasswordField'
 import { PERFIS_USUARIO } from '../lib/constants'
 import { normalizeRole } from '../lib/permissions'
 
-const emptyForm = { nome: '', email: '', telefone: '', role: 'vistoriador', ativo: true }
+const emptyForm = {
+  nome: '',
+  email: '',
+  telefone: '',
+  role: 'vistoriador',
+  ativo: true,
+  password: '',
+  confirmPassword: ''
+}
 
 export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
   const isEdit = Boolean(usuario)
@@ -23,7 +32,9 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
               // Normaliza para o valor canônico ('admin'/'gestao'/'vistoriador')
               // caso o registro tenha sido salvo com o rótulo em português.
               role: normalizeRole(usuario.role) || 'vistoriador',
-              ativo: usuario.ativo
+              ativo: usuario.ativo,
+              password: '',
+              confirmPassword: ''
             }
           : emptyForm
       )
@@ -35,12 +46,31 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setErrorMsg('')
+
     if (!form.nome || !form.email || !form.role) {
       setErrorMsg('Preencha nome, e-mail e perfil.')
       return
     }
+
+    // Senha só é exigida no cadastro — para trocar a senha de um usuário
+    // existente, use "Alterar senha" no menu de ações da lista.
+    if (!isEdit) {
+      if (!form.password || !form.confirmPassword) {
+        setErrorMsg('Informe a senha de acesso e a confirmação.')
+        return
+      }
+      if (form.password.length < 6) {
+        setErrorMsg('A senha precisa ter pelo menos 6 caracteres.')
+        return
+      }
+      if (form.password !== form.confirmPassword) {
+        setErrorMsg('As senhas não coincidem.')
+        return
+      }
+    }
+
     setSubmitting(true)
-    setErrorMsg('')
     try {
       await onSubmit(form, usuario?.id)
       onClose()
@@ -61,7 +91,12 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="label-field">Nome completo *</label>
-          <input className="input-field" value={form.nome} onChange={handleChange('nome')} placeholder="Ex: Ana Souza" />
+          <input
+            className="input-field"
+            value={form.nome}
+            onChange={handleChange('nome')}
+            placeholder="Ex: Ana Souza"
+          />
         </div>
 
         <div>
@@ -74,7 +109,9 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
             placeholder="ana.souza@segueimoveis.com.br"
             disabled={isEdit}
           />
-          {isEdit && <p className="mt-1 text-xs text-slate-400">O e-mail não pode ser alterado após o cadastro.</p>}
+          {isEdit && (
+            <p className="mt-1 text-xs text-slate-400">O e-mail não pode ser alterado após o cadastro.</p>
+          )}
         </div>
 
         <div>
@@ -97,6 +134,30 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
             ))}
           </select>
         </div>
+
+        {!isEdit && (
+          <>
+            <PasswordField
+              id="novo-usuario-senha"
+              label="Senha de acesso *"
+              value={form.password}
+              onChange={handleChange('password')}
+            />
+            <PasswordField
+              id="novo-usuario-confirmar-senha"
+              label="Confirmar senha *"
+              value={form.confirmPassword}
+              onChange={handleChange('confirmPassword')}
+            />
+          </>
+        )}
+
+        {isEdit && (
+          <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            Para alterar a senha deste usuário, use a opção <strong>Alterar senha</strong> no menu de ações
+            da lista.
+          </p>
+        )}
 
         <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3.5 py-2.5">
           <div>

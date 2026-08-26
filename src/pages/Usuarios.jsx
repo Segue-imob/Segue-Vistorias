@@ -1,14 +1,36 @@
-import { useState } from 'react'
-import { Plus, Loader2, Pencil, Search } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Plus, Loader2, MoreVertical, Pencil, KeyRound, Search } from 'lucide-react'
 import { useProfiles } from '../hooks/useProfiles'
 import UsuarioModal from '../components/UsuarioModal'
+import ResetPasswordModal from '../components/ResetPasswordModal'
+import SuccessBanner from '../components/SuccessBanner'
 import { getRoleLabel } from '../lib/permissions'
 
 export default function Usuarios() {
-  const { profiles, loading, createProfile, updateProfile, toggleAtivo } = useProfiles()
+  const { profiles, loading, createUserWithAuth, updateProfile, resetUserPassword, toggleAtivo } = useProfiles()
+
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
+
+  const [resetModalOpen, setResetModalOpen] = useState(false)
+  const [resetUser, setResetUser] = useState(null)
+
+  const [openMenuId, setOpenMenuId] = useState(null)
   const [search, setSearch] = useState('')
+
+  const [successMsg, setSuccessMsg] = useState('')
+  const [pageErrorMsg, setPageErrorMsg] = useState('')
+  const successTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    return () => clearTimeout(successTimeoutRef.current)
+  }, [])
+
+  const showSuccess = (message) => {
+    setSuccessMsg(message)
+    clearTimeout(successTimeoutRef.current)
+    successTimeoutRef.current = setTimeout(() => setSuccessMsg(''), 4000)
+  }
 
   const filtered = profiles.filter((p) => {
     const term = search.trim().toLowerCase()
@@ -24,8 +46,24 @@ export default function Usuarios() {
         role: form.role,
         ativo: form.ativo
       })
+      showSuccess('Perfil atualizado com sucesso!')
     } else {
-      await createProfile(form)
+      await createUserWithAuth(form)
+      showSuccess('Usuário cadastrado com sucesso!')
+    }
+  }
+
+  const handleResetPassword = async (userId, password) => {
+    await resetUserPassword(userId, password)
+    showSuccess('Senha atualizada com sucesso!')
+  }
+
+  const handleToggleAtivo = async (user) => {
+    setPageErrorMsg('')
+    try {
+      await toggleAtivo(user.id, !user.ativo)
+    } catch (err) {
+      setPageErrorMsg(err.message || 'Erro ao atualizar status do usuário.')
     }
   }
 
@@ -39,6 +77,11 @@ export default function Usuarios() {
     setModalOpen(true)
   }
 
+  const openResetPassword = (user) => {
+    setResetUser(user)
+    setResetModalOpen(true)
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -50,6 +93,11 @@ export default function Usuarios() {
           <Plus size={16} /> Novo usuário
         </button>
       </div>
+
+      <SuccessBanner message={successMsg} />
+      {pageErrorMsg && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{pageErrorMsg}</p>
+      )}
 
       <div className="relative w-full sm:max-w-sm">
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -97,7 +145,7 @@ export default function Usuarios() {
                   <td className="px-4 py-3">
                     <button
                       type="button"
-                      onClick={() => toggleAtivo(user.id, !user.ativo)}
+                      onClick={() => handleToggleAtivo(user)}
                       className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
                         user.ativo ? 'bg-[#4CAF50]/10 text-[#2E7D32]' : 'bg-slate-100 text-slate-500'
                       }`}
@@ -105,15 +153,40 @@ export default function Usuarios() {
                       {user.ativo ? 'Ativo' : 'Inativo'}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="relative px-4 py-3 text-right">
                     <button
                       type="button"
-                      onClick={() => openEdit(user)}
+                      onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
                       className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                      title="Editar usuário"
+                      title="Ações"
                     >
-                      <Pencil size={15} />
+                      <MoreVertical size={16} />
                     </button>
+
+                    {openMenuId === user.id && (
+                      <div className="absolute right-4 z-10 mt-1 w-48 rounded-lg border border-slate-100 bg-white py-1 shadow-modal">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            openEdit(user)
+                            setOpenMenuId(null)
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          <Pencil size={13} /> Editar perfil
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            openResetPassword(user)
+                            setOpenMenuId(null)
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          <KeyRound size={13} /> Alterar senha
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -131,6 +204,12 @@ export default function Usuarios() {
       )}
 
       <UsuarioModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleSubmit} usuario={editingUser} />
+      <ResetPasswordModal
+        open={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+        usuario={resetUser}
+        onSubmit={handleResetPassword}
+      />
     </div>
   )
 }
