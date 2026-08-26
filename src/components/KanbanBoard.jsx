@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { MapPin, User, GripVertical } from 'lucide-react'
+import { MapPin, User, GripVertical, Pencil, Trash2 } from 'lucide-react'
 import { KANBAN_COLUMNS, getStatusMeta } from '../lib/constants'
 
-function KanbanCard({ vistoria, onDragStart }) {
+function KanbanCard({ vistoria, onDragStart, onEdit, onDelete, canEdit, canDelete }) {
   return (
     <div
       draggable
@@ -12,7 +12,36 @@ function KanbanCard({ vistoria, onDragStart }) {
     >
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-xs font-bold text-slate-800">{vistoria.imoveis?.codigo_imovel}</span>
-        <GripVertical size={14} className="text-slate-300" />
+
+        {/* draggable=false + stopPropagation evita que um clique nesses
+            botões seja interpretado como início do drag do card */}
+        <div
+          className="flex items-center gap-0.5"
+          draggable={false}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(vistoria)}
+              className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-accent"
+              title="Editar vistoria"
+            >
+              <Pencil size={12} />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(vistoria)}
+              className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
+              title="Excluir vistoria"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
+          <GripVertical size={14} className="text-slate-300" />
+        </div>
       </div>
       <p className="mb-2 text-xs font-medium text-brand-accent">{vistoria.tipo}</p>
       <p className="flex items-center gap-1 text-[11px] text-slate-500">
@@ -30,7 +59,7 @@ function KanbanCard({ vistoria, onDragStart }) {
   )
 }
 
-export default function KanbanBoard({ vistorias, onChangeStatus }) {
+export default function KanbanBoard({ vistorias, onChangeStatus, onEdit, onDelete, canEditFn, canDelete }) {
   const [dragOverCol, setDragOverCol] = useState(null)
 
   const handleDragStart = (e, id) => {
@@ -79,7 +108,17 @@ export default function KanbanBoard({ vistorias, onChangeStatus }) {
                   Arraste vistorias para cá
                 </div>
               ) : (
-                items.map((v) => <KanbanCard key={v.id} vistoria={v} onDragStart={handleDragStart} />)
+                items.map((v) => (
+                  <KanbanCard
+                    key={v.id}
+                    vistoria={v}
+                    onDragStart={handleDragStart}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    canEdit={canEditFn(v)}
+                    canDelete={canDelete}
+                  />
+                ))
               )}
             </div>
           </div>

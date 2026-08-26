@@ -1,15 +1,24 @@
 import { useMemo, useState } from 'react'
 import { LayoutList, LayoutGrid, Search, Plus, Loader2 } from 'lucide-react'
 import { useVistorias } from '../hooks/useVistorias'
+import { useAuth } from '../context/AuthContext'
+import { canEditVistoria, canDeleteVistoria } from '../lib/permissions'
 import VistoriaModal from '../components/VistoriaModal'
 import VistoriaListView from '../components/VistoriaListView'
 import KanbanBoard from '../components/KanbanBoard'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function Vistorias() {
-  const { vistorias, loading, createVistoria, updateStatus } = useVistorias()
+  const { profile, role } = useAuth()
+  const { vistorias, loading, createVistoria, updateVistoria, updateStatus, removeVistoria } = useVistorias()
+
   const [view, setView] = useState('lista') // 'lista' | 'kanban'
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingVistoria, setEditingVistoria] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+
+  const podeExcluir = canDeleteVistoria(role)
 
   const filteredVistorias = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -32,6 +41,29 @@ export default function Vistorias() {
     })
   }, [vistorias, search])
 
+  const openCreate = () => {
+    setEditingVistoria(null)
+    setModalOpen(true)
+  }
+
+  const openEdit = (vistoria) => {
+    setEditingVistoria(vistoria)
+    setModalOpen(true)
+  }
+
+  const handleVistoriaSubmit = async (payload, id) => {
+    if (id) {
+      await updateVistoria(id, payload)
+    } else {
+      await createVistoria({ ...payload, criado_por: profile?.id })
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    await removeVistoria(deleteTarget.id)
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -39,7 +71,7 @@ export default function Vistorias() {
           <h1 className="text-xl font-bold text-slate-900">Vistorias</h1>
           <p className="text-sm text-slate-500">Gerencie todas as vistorias da imobiliária.</p>
         </div>
-        <button type="button" onClick={() => setModalOpen(true)} className="btn-primary">
+        <button type="button" onClick={openCreate} className="btn-primary">
           <Plus size={16} /> Agendar Vistoria
         </button>
       </div>
@@ -82,12 +114,41 @@ export default function Vistorias() {
           <Loader2 className="animate-spin" size={22} />
         </div>
       ) : view === 'lista' ? (
-        <VistoriaListView vistorias={filteredVistorias} onChangeStatus={updateStatus} />
+        <VistoriaListView
+          vistorias={filteredVistorias}
+          onChangeStatus={updateStatus}
+          onEdit={openEdit}
+          onDelete={setDeleteTarget}
+          canEdit={(v) => canEditVistoria(v, profile, role)}
+          canDelete={podeExcluir}
+        />
       ) : (
-        <KanbanBoard vistorias={filteredVistorias} onChangeStatus={updateStatus} />
+        <KanbanBoard
+          vistorias={filteredVistorias}
+          onChangeStatus={updateStatus}
+          onEdit={openEdit}
+          onDelete={setDeleteTarget}
+          canEditFn={(v) => canEditVistoria(v, profile, role)}
+          canDelete={podeExcluir}
+        />
       )}
 
-      <VistoriaModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={createVistoria} />
+      <VistoriaModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleVistoriaSubmit}
+        vistoria={editingVistoria}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        title="Excluir vistoria"
+        description="Tem certeza que deseja excluir permanentemente esta vistoria? Esta ação não afetará os dados históricos."
+        confirmLabel="Excluir vistoria"
+        danger
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { format } from 'date-fns'
 import Modal from './Modal'
 import { TIPOS_VISTORIA } from '../lib/constants'
 import { useImoveis } from '../hooks/useImoveis'
@@ -14,7 +15,15 @@ const emptyForm = {
   observacoes: ''
 }
 
-export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) {
+/**
+ * Modal de agendamento E edição de vistoria. Passe `vistoria` (a linha
+ * atual, vinda de useVistorias) para abrir em modo edição — os campos
+ * vêm pré-preenchidos e o envio chama `onSubmit(payload, vistoria.id)`
+ * em vez de `onSubmit(payload)`, para a página decidir entre
+ * createVistoria/updateVistoria.
+ */
+export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vistoria }) {
+  const isEdit = Boolean(vistoria)
   const { imoveis, createImovel } = useImoveis()
   const { vistoriadores } = useProfiles()
   const [form, setForm] = useState(emptyForm)
@@ -33,11 +42,23 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
 
   useEffect(() => {
     if (open) {
-      setForm({ ...emptyForm, data: defaultDate || '' })
+      if (vistoria) {
+        const dt = vistoria.data_agendamento ? new Date(vistoria.data_agendamento) : null
+        setForm({
+          imovel_id: vistoria.imovel_id || '',
+          tipo: vistoria.tipo || TIPOS_VISTORIA[0],
+          data: dt ? format(dt, 'yyyy-MM-dd') : '',
+          hora: dt ? format(dt, 'HH:mm') : '',
+          vistoriador_id: vistoria.vistoriador_id || '',
+          observacoes: vistoria.observacoes || ''
+        })
+      } else {
+        setForm({ ...emptyForm, data: defaultDate || '' })
+      }
       setErrorMsg('')
       setShowNovoImovel(false)
     }
-  }, [open, defaultDate])
+  }, [open, defaultDate, vistoria])
 
   const handleChange = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
@@ -75,38 +96,50 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
     setSubmitting(true)
     setErrorMsg('')
     try {
-      await onSubmit({
+      const payload = {
         imovel_id: form.imovel_id,
         tipo: form.tipo,
         vistoriador_id: form.vistoriador_id,
         observacoes: form.observacoes || null,
-        data_agendamento: new Date(`${form.data}T${form.hora}`).toISOString(),
-        status: 'agendada'
-      })
+        data_agendamento: new Date(`${form.data}T${form.hora}`).toISOString()
+      }
+      // Só define status "agendada" ao criar — editar não deve mexer
+      // no status atual da vistoria (isso é feito no Kanban/menu).
+      if (!isEdit) {
+        payload.status = 'agendada'
+      }
+      await onSubmit(payload, vistoria?.id)
       onClose()
     } catch (err) {
-      setErrorMsg(err.message || 'Erro ao agendar vistoria.')
+      setErrorMsg(err.message || (isEdit ? 'Erro ao salvar alterações.' : 'Erro ao agendar vistoria.'))
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Agendar vistoria" subtitle="Preencha os dados do imóvel e da visita">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEdit ? 'Editar vistoria' : 'Agendar vistoria'}
+      subtitle={isEdit ? 'Atualize os dados da vistoria' : 'Preencha os dados do imóvel e da visita'}
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <label className="label-field !mb-0">Imóvel *</label>
-            <button
-              type="button"
-              onClick={() => setShowNovoImovel((v) => !v)}
-              className="flex items-center gap-1 text-xs font-semibold text-brand-accent hover:underline"
-            >
-              <Plus size={13} /> Novo imóvel
-            </button>
+            {!isEdit && (
+              <button
+                type="button"
+                onClick={() => setShowNovoImovel((v) => !v)}
+                className="flex items-center gap-1 text-xs font-semibold text-brand-accent hover:underline"
+              >
+                <Plus size={13} /> Novo imóvel
+              </button>
+            )}
           </div>
 
-          {showNovoImovel && (
+          {showNovoImovel && !isEdit && (
             <div className="mb-3 space-y-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
               <div className="grid grid-cols-2 gap-2">
                 <input
@@ -159,7 +192,12 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
             </div>
           )}
 
-          <select className="input-field" value={form.imovel_id} onChange={handleChange('imovel_id')}>
+          <select
+            className="input-field"
+            value={form.imovel_id}
+            onChange={handleChange('imovel_id')}
+            disabled={isEdit}
+          >
             <option value="">Selecione um imóvel</option>
             {imoveis.map((im) => (
               <option key={im.id} value={im.id}>
@@ -167,6 +205,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
               </option>
             ))}
           </select>
+          {isEdit && <p className="mt-1 text-xs text-slate-400">O imóvel não pode ser alterado após o agendamento.</p>}
         </div>
 
         <div>
@@ -233,7 +272,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate }) 
           </button>
           <button type="submit" disabled={submitting} className="btn-primary">
             {submitting && <Loader2 size={15} className="animate-spin" />}
-            Agendar vistoria
+            {isEdit ? 'Salvar alterações' : 'Agendar vistoria'}
           </button>
         </div>
       </form>

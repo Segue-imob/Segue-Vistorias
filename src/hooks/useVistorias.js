@@ -24,6 +24,7 @@ export function useVistorias({ vistoriadorId } = {}) {
         observacoes,
         imovel_id,
         vistoriador_id,
+        criado_por,
         imoveis:imovel_id ( id, codigo_imovel, endereco, bairro, cidade, inquilino_nome, proprietario_nome ),
         vistoriador:vistoriador_id ( id, nome, email )
       `
@@ -86,6 +87,20 @@ export function useVistorias({ vistoriadorId } = {}) {
     if (error) throw error
   }, [])
 
+  /**
+   * Exclusão FÍSICA da vistoria (usada pelo botão de lixeira, restrito
+   * ao Administrador). Diferente de `deleteVistoria` acima, que só
+   * cancela — aqui a linha realmente some da tabela `vistorias`. Como
+   * `imoveis` e `profiles` não têm FK apontando de volta para
+   * `vistorias`, excluir uma vistoria nunca apaga dados de imóvel ou
+   * de usuário ("não afeta os dados históricos").
+   */
+  const removeVistoria = useCallback(async (id) => {
+    const { error } = await supabase.from('vistorias').delete().eq('id', id)
+    if (error) throw error
+    setVistorias((prev) => prev.filter((v) => v.id !== id))
+  }, [])
+
   return {
     vistorias,
     loading,
@@ -94,6 +109,7 @@ export function useVistorias({ vistoriadorId } = {}) {
     createVistoria,
     updateVistoria,
     updateStatus,
-    deleteVistoria
+    deleteVistoria,
+    removeVistoria
   }
 }

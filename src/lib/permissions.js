@@ -87,3 +87,24 @@ export function getHomeRouteForRole(role) {
   if (isVistoriador(role)) return '/minhas-vistorias'
   return '/sem-acesso'
 }
+
+// ------------------------------------------------------------------
+// Editar/Excluir vistoria dependem não só do role, mas também de QUEM
+// é o usuário logado (o solicitante original) — por isso ficam fora
+// do mapa PERMISSIONS (que assume só o role como entrada).
+// ------------------------------------------------------------------
+
+/** Excluir vistoria (remoção física) é restrito ao Administrador. */
+export function canDeleteVistoria(role) {
+  return isAdmin(role)
+}
+
+/**
+ * Editar vistoria é permitido para Administrador, Gestão, ou o
+ * solicitante original (quem agendou, coluna `vistorias.criado_por`).
+ */
+export function canEditVistoria(vistoria, profile, role) {
+  if (!vistoria) return false
+  if (isAdmin(role) || isGestao(role)) return true
+  return Boolean(profile?.id) && vistoria.criado_por === profile.id
+}

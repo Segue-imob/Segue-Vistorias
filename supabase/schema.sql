@@ -341,3 +341,32 @@ create policy "Autenticados removem de vistoria-fotos"
   on storage.objects for delete
   to authenticated
   using (bucket_id = 'vistoria-fotos');
+
+-- ============================================================
+-- Editar / Excluir vistoria (Agenda, Kanban, Listagem)
+--   - Excluir (remoção física): só Administrador — já coberto pela
+--     policy "Somente admin remove vistorias" criada anteriormente.
+--   - Editar: Administrador, Gestão, ou o solicitante original
+--     (quem agendou a vistoria) — por isso guardamos `criado_por` e
+--     ampliamos a policy de UPDATE para incluir esses três casos.
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+alter table public.vistorias add column if not exists criado_por uuid references public.profiles (id);
+create index if not exists idx_vistorias_criado_por on public.vistorias (criado_por);
+
+drop policy if exists "Atualizacao por hierarquia de role" on public.vistorias;
+create policy "Atualizacao por hierarquia de role"
+  on public.vistorias for update
+  to authenticated
+  using (
+    public.is_admin()
+    or public.is_gestao()
+    or criado_por = auth.uid()
+    or (public.is_vistoriador() and vistoriador_id = auth.uid())
+  )
+  with check (
+    public.is_admin()
+    or public.is_gestao()
+    or criado_por = auth.uid()
+    or (public.is_vistoriador() and vistoriador_id = auth.uid())
+  );

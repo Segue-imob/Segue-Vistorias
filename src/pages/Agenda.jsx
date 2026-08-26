@@ -3,23 +3,27 @@ import { format } from 'date-fns'
 import Calendar from '../components/Calendar'
 import DayAgendaPanel from '../components/DayAgendaPanel'
 import VistoriaModal from '../components/VistoriaModal'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { useVistorias } from '../hooks/useVistorias'
 import { useProfiles } from '../hooks/useProfiles'
 import { useAuth } from '../context/AuthContext'
-import { PERMISSIONS } from '../lib/permissions'
+import { PERMISSIONS, canEditVistoria, canDeleteVistoria } from '../lib/permissions'
 import { TIPOS_VISTORIA } from '../lib/constants'
 import { Filter, Plus } from 'lucide-react'
 
 export default function Agenda() {
-  const { role } = useAuth()
+  const { role, profile } = useAuth()
   const canSchedule = PERMISSIONS.scheduleVistoria(role)
+  const podeExcluir = canDeleteVistoria(role)
 
-  const { vistorias, createVistoria } = useVistorias()
+  const { vistorias, createVistoria, updateVistoria, removeVistoria } = useVistorias()
   const { vistoriadores } = useProfiles()
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(new Date())
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingVistoria, setEditingVistoria] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [filtroVistoriador, setFiltroVistoriador] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
 
@@ -30,6 +34,29 @@ export default function Agenda() {
       return true
     })
   }, [vistorias, filtroVistoriador, filtroTipo])
+
+  const openCreate = () => {
+    setEditingVistoria(null)
+    setModalOpen(true)
+  }
+
+  const openEdit = (vistoria) => {
+    setEditingVistoria(vistoria)
+    setModalOpen(true)
+  }
+
+  const handleVistoriaSubmit = async (payload, id) => {
+    if (id) {
+      await updateVistoria(id, payload)
+    } else {
+      await createVistoria({ ...payload, criado_por: profile?.id })
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    await removeVistoria(deleteTarget.id)
+  }
 
   return (
     <div className="space-y-5">
@@ -68,7 +95,7 @@ export default function Agenda() {
             ))}
           </select>
           {canSchedule && (
-            <button type="button" onClick={() => setModalOpen(true)} className="btn-primary !py-2">
+            <button type="button" onClick={openCreate} className="btn-primary !py-2">
               <Plus size={15} /> Agendar Vistoria
             </button>
           )}
@@ -86,7 +113,11 @@ export default function Agenda() {
         <DayAgendaPanel
           day={selectedDay}
           vistorias={filteredVistorias}
-          onAddClick={canSchedule ? () => setModalOpen(true) : null}
+          onAddClick={canSchedule ? openCreate : null}
+          onEdit={openEdit}
+          onDelete={setDeleteTarget}
+          canEditFn={(v) => canEditVistoria(v, profile, role)}
+          canDelete={podeExcluir}
         />
       </div>
 
@@ -94,10 +125,21 @@ export default function Agenda() {
         <VistoriaModal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
-          onSubmit={createVistoria}
+          onSubmit={handleVistoriaSubmit}
           defaultDate={format(selectedDay, 'yyyy-MM-dd')}
+          vistoria={editingVistoria}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        title="Excluir vistoria"
+        description="Tem certeza que deseja excluir permanentemente esta vistoria? Esta ação não afetará os dados históricos."
+        confirmLabel="Excluir vistoria"
+        danger
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   )
 }

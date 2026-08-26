@@ -1,9 +1,17 @@
 import { format, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Clock, MapPin, User, Plus } from 'lucide-react'
+import { Clock, MapPin, User, Plus, Pencil, Trash2 } from 'lucide-react'
 import StatusBadge from './StatusBadge'
 
-export default function DayAgendaPanel({ day, vistorias, onAddClick }) {
+export default function DayAgendaPanel({
+  day,
+  vistorias,
+  onAddClick,
+  onEdit,
+  onDelete,
+  canEditFn = () => false,
+  canDelete = false
+}) {
   const dayVistorias = vistorias
     .filter((v) => v.data_agendamento && isSameDay(new Date(v.data_agendamento), day))
     .sort((a, b) => new Date(a.data_agendamento) - new Date(b.data_agendamento))
@@ -45,7 +53,29 @@ export default function DayAgendaPanel({ day, vistorias, onAddClick }) {
                   <Clock size={13} />
                   {format(new Date(v.data_agendamento), 'HH:mm')}
                 </span>
-                <StatusBadge status={v.status} size="sm" />
+                <div className="flex items-center gap-1">
+                  <StatusBadge status={v.status} size="sm" />
+                  {canEditFn(v) && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(v)}
+                      className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-accent"
+                      title="Editar vistoria"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(v)}
+                      className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      title="Excluir vistoria"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="text-sm font-semibold text-slate-900">
                 {v.imoveis?.codigo_imovel} · {v.tipo}
