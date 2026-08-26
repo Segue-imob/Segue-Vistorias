@@ -4,6 +4,7 @@ import { useProfiles } from '../hooks/useProfiles'
 import UsuarioModal from '../components/UsuarioModal'
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import SuccessBanner from '../components/SuccessBanner'
+import WarningBanner from '../components/WarningBanner'
 import { getRoleLabel } from '../lib/permissions'
 
 export default function Usuarios() {
@@ -19,17 +20,29 @@ export default function Usuarios() {
   const [search, setSearch] = useState('')
 
   const [successMsg, setSuccessMsg] = useState('')
+  const [warningMsg, setWarningMsg] = useState('')
   const [pageErrorMsg, setPageErrorMsg] = useState('')
-  const successTimeoutRef = useRef(null)
+  const bannerTimeoutRef = useRef(null)
 
   useEffect(() => {
-    return () => clearTimeout(successTimeoutRef.current)
+    return () => clearTimeout(bannerTimeoutRef.current)
   }, [])
 
   const showSuccess = (message) => {
+    setWarningMsg('')
     setSuccessMsg(message)
-    clearTimeout(successTimeoutRef.current)
-    successTimeoutRef.current = setTimeout(() => setSuccessMsg(''), 4000)
+    clearTimeout(bannerTimeoutRef.current)
+    bannerTimeoutRef.current = setTimeout(() => setSuccessMsg(''), 4000)
+  }
+
+  // Aviso "sucesso parcial": o perfil foi salvo, mas não foi possível
+  // criar o login em Supabase Auth (ver createUserWithAuth). Fica mais
+  // tempo na tela porque exige uma ação manual do Administrador depois.
+  const showWarning = (message) => {
+    setSuccessMsg('')
+    setWarningMsg(message)
+    clearTimeout(bannerTimeoutRef.current)
+    bannerTimeoutRef.current = setTimeout(() => setWarningMsg(''), 10000)
   }
 
   const filtered = profiles.filter((p) => {
@@ -48,8 +61,16 @@ export default function Usuarios() {
       })
       showSuccess('Perfil atualizado com sucesso!')
     } else {
-      await createUserWithAuth(form)
-      showSuccess('Usuário cadastrado com sucesso!')
+      const result = await createUserWithAuth(form)
+      if (result.authCreated) {
+        showSuccess('Usuário cadastrado com sucesso!')
+      } else {
+        showWarning(
+          `O perfil de "${form.nome}" foi salvo, mas não foi possível criar o login automaticamente. ` +
+            'Crie a conta desta pessoa em Authentication > Users no Supabase, usando o mesmo e-mail, ' +
+            `e defina o ID dela como ${result.id} — só assim ela conseguirá entrar no sistema.`
+        )
+      }
     }
   }
 
@@ -95,6 +116,7 @@ export default function Usuarios() {
       </div>
 
       <SuccessBanner message={successMsg} />
+      <WarningBanner message={warningMsg} />
       {pageErrorMsg && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{pageErrorMsg}</p>
       )}

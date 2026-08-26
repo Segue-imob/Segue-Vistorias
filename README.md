@@ -82,28 +82,26 @@ Também é criado um **bucket de Storage público chamado `vistoria-fotos`** (fo
 
 ## Gerenciamento de usuários (Administrador)
 
-A aba **Usuários** cadastra, edita e redefine senha de membros da equipe direto pelo app, sem precisar abrir o painel do Supabase. Isso exige duas **Edge Functions**, porque criar um usuário com senha em Supabase Auth só pode ser feito de duas formas:
+A aba **Usuários** cadastra, edita e redefine senha de membros da equipe direto pelo app, sem precisar abrir o painel do Supabase.
 
-- `supabase.auth.signUp()` no navegador — **não usamos essa opção**: ela troca a sessão do navegador para a do usuário recém-criado, ou seja, o Administrador seria deslogado a cada cadastro.
-- `supabase.auth.admin.createUser()` — exige a **service_role key**, que nunca pode ir para o código do front-end (ela ignora todo o RLS; se vazasse no bundle do site, qualquer visitante teria acesso total ao banco).
+### Cadastro de usuário — 100% client-side, sem Edge Function
 
-A solução: as duas ações rodam em **Supabase Edge Functions** (servidor, com a service_role key protegida como variável de ambiente que o Supabase já injeta automaticamente — não precisa configurar nada manualmente):
+O cadastro usa `supabase.auth.signUp({ email, password })` (client-side, sem depender de nenhuma Edge Function) seguido de um `upsert` em `profiles` com os dados complementares (Nome, Telefone, Role, Ativo). Toda a lógica está em `useProfiles().createUserWithAuth` (`src/hooks/useProfiles.js`). Três cuidados que essa abordagem exige — todos tratados no código:
 
-- `supabase/functions/admin-create-user` — cria o usuário em Auth (`auth.admin.createUser`) e a linha em `profiles` na sequência; se o `profiles` falhar, desfaz a criação em Auth (rollback). Retorna `"Este e-mail já está cadastrado."` quando o e-mail já existe.
-- `supabase/functions/admin-reset-password` — redefine a senha de um usuário existente (`auth.admin.updateUserById`), acionado pelo item **Alterar senha** no menu de ações (ícone `⋮`) de cada linha da tabela.
-- `supabase/functions/_shared/admin.ts` — helpers compartilhados: monta os dois clientes Supabase (um autenticado como quem chamou, outro com a service_role) e confirma que quem chamou é, de fato, um Administrador — checagem redundante com o RLS, mas que já barra a chamada antes de tocar no banco.
+1. **`signUp()` troca a sessão ativa do navegador** para a do usuário recém-criado (comportamento padrão do Supabase Auth quando chamado com uma sessão já logada). Para o Administrador não ser deslogado a cada cadastro, `createUserWithAuth` guarda a sessão dele com `supabase.auth.getSession()` **antes** de chamar `signUp()`, e a restaura com `supabase.auth.setSession()` logo depois — antes até de gravar o `profiles`, já que a policy de `INSERT` exige que quem está logado no momento seja Administrador. Ainda assim pode haver um breve "piscar" da tela durante a troca, já que isso acontece no navegador; é a limitação de fazer esse fluxo sem um servidor no meio.
+2. **Confirmação de e-mail**: se a opção "Confirm email" estiver ligada em Authentication → Providers → Email no seu projeto Supabase, o usuário criado só consegue logar depois de clicar no link enviado por e-mail — o `signUp()` do navegador não tem o equivalente do `email_confirm: true` da API admin. Se quiser que contas criadas pelo Administrador já entrem direto, desligue essa opção.
+3. **Fallback (item pedido explicitamente)**: se `signUp()` falhar por qualquer motivo que não seja e-mail duplicado, o app ainda salva o perfil em `profiles` com um `id` gerado localmente via `crypto.randomUUID()`, para o Administrador não perder os dados já digitados — nesse caso aparece um **alerta amarelo** explicando que o perfil foi salvo mas o login não foi criado, com o UUID gerado, para alguém criar manualmente a conta em Authentication → Users depois. E-mail duplicado sempre vira a mensagem "Este e-mail já está cadastrado.", sem cair nesse fallback.
 
-**Deploy das functions** (com o [Supabase CLI](https://supabase.com/docs/guides/cli) instalado e logado):
+### Alterar senha — ainda usa Edge Function
+
+Diferente do cadastro, **redefinir a senha de um usuário existente continua usando a Edge Function `admin-reset-password`** (`auth.admin.updateUserById`) — não existe um jeito client-side de um Administrador definir a senha de outra pessoa sem a service_role key. Se você não fizer o deploy dela, o botão **Alterar senha** no menu de ações vai falhar com o mesmo erro `Failed to send a request to the Edge Function` que você viu no cadastro:
 
 ```bash
 supabase link --project-ref SEU_PROJECT_REF
-supabase functions deploy admin-create-user
 supabase functions deploy admin-reset-password
 ```
 
-Não é preciso configurar `SUPABASE_URL`, `SUPABASE_ANON_KEY` ou `SUPABASE_SERVICE_ROLE_KEY` manualmente — o Supabase já disponibiliza essas três variáveis automaticamente dentro de toda Edge Function do projeto.
-
-No front-end, `src/hooks/useProfiles.js` expõe `createUserWithAuth(payload)` e `resetUserPassword(userId, password)`, que chamam essas functions via `supabase.functions.invoke(...)` e traduzem o corpo de erro da resposta (`error.context`) para uma mensagem legível — é daí que vêm os alertas "Usuário cadastrado com sucesso!", "Senha atualizada com sucesso!" e "Este e-mail já está cadastrado." na tela.
+Não é preciso configurar `SUPABASE_URL`, `SUPABASE_ANON_KEY` ou `SUPABASE_SERVICE_ROLE_KEY` manualmente — o Supabase já disponibiliza essas três variáveis automaticamente dentro de toda Edge Function do projeto. Se preferir remover essa dependência também, dá pra trocar por `supabase.auth.resetPasswordForEmail(email)` (manda um link de redefinição para o próprio usuário) — é só pedir.
 
 ## Paleta oficial de status
 
@@ -124,7 +122,7 @@ Rode o script `supabase/schema.sql` no **SQL Editor** do seu projeto Supabase. E
 - `imoveis`: `id, codigo_imovel, endereco, bairro, cidade, proprietario_nome, inquilino_nome`
 - `vistorias`: `id, imovel_id, vistoriador_id, tipo, status, data_agendamento, observacoes, assinatura_url, finalizada_em, criado_por`
 
-Depois, faça o deploy das Edge Functions de gerenciamento de usuários (veja a seção "Gerenciamento de usuários" abaixo) — sem isso, a aba Usuários não consegue cadastrar novas contas.
+Depois, se você quiser usar a opção "Alterar senha" da aba Usuários, faça o deploy da Edge Function `admin-reset-password` (veja a seção "Gerenciamento de usuários" abaixo) — o cadastro de usuário em si não depende de nenhuma Edge Function.
 
 ## 2. Rodar localmente
 
@@ -158,9 +156,8 @@ src/
 supabase/
   schema.sql      # DDL de referência (tabelas, RLS por role, realtime, checklist de vistoria, storage)
   functions/
-    admin-create-user/    # Edge Function: cria usuário em Auth + profiles (service role)
     admin-reset-password/ # Edge Function: redefine senha de um usuário (service role)
-    _shared/admin.ts       # helpers compartilhados pelas duas functions
+    _shared/admin.ts       # helpers compartilhados pela function acima
 ```
 
 ## Notas de implementação

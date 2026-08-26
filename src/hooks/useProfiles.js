@@ -56,27 +56,104 @@ export function useProfiles() {
   )
 
   /**
-   * Cadastro completo de usuário: cria o registro em Supabase Auth
-   * (com senha) e a linha correspondente em `profiles`, via Edge
-   * Function (admin-create-user) — roda no servidor com a
-   * service_role key, sem derrubar a sessão do Administrador logado
-   * e sem expor essa chave no navegador.
+   * Cadastro completo de usuário — SEM Edge Function: cria a conta em
+   * Supabase Auth via `auth.signUp()` (client-side) e a linha
+   * correspondente em `profiles` na sequência.
+   *
+   * Cuidados que isso exige (documentados aqui porque não são óbvios):
+   *
+   * 1) `signUp()` chamado com uma sessão já ativa no navegador TROCA a
+   *    sessão atual para a do usuário recém-criado. Para o Administrador
+   *    não ser deslogado no meio do cadastro, guardamos a sessão dele
+   *    ANTES de chamar signUp() e a restauramos com `setSession()` logo
+   *    depois — antes até de gravar o `profiles`, já que a policy de
+   *    INSERT em profiles exige que quem está logado no momento seja
+   *    Administrador.
+   * 2) Se a confirmação de e-mail estiver ligada no projeto (Authentication
+   *    > Providers > Email > "Confirm email"), o usuário criado não
+   *    consegue logar até clicar no link de confirmação — o client-side
+   *    signUp() não tem o equivalente do `email_confirm: true` da API
+   *    admin. Desligue essa opção no Supabase se quiser que contas
+   *    criadas pelo Administrador já entrem direto.
+   * 3) Fallback: se o signUp() falhar por qualquer motivo que não seja
+   *    e-mail duplicado (ex.: problema de sessão), salvamos mesmo assim
+   *    o perfil em `profiles` com um UUID gerado localmente
+   *    (`crypto.randomUUID()`), para o Administrador não perder os dados
+   *    já digitados. Esse fallback NÃO cria login em Auth — a pessoa só
+   *    consegue entrar depois que alguém criar a conta dela em
+   *    Authentication > Users usando esse mesmo UUID como ID.
    */
   const createUserWithAuth = useCallback(async (payload) => {
-    const { data, error } = await supabase.functions.invoke('admin-create-user', {
-      body: {
+    const {
+      data: { session: adminSession }
+    } = await supabase.auth.getSession()
+
+    const restoreAdminSession = async () => {
+      if (!adminSession) return
+      try {
+        await supabase.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token
+        })
+      } catch {
+        // Melhor esforço: se a restauração falhar, o erro principal do
+        // cadastro (lançado logo abaixo) já avisa o Administrador.
+      }
+    }
+
+    try {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: payload.email,
+        password: payload.password
+      })
+
+      if (signUpError) throw signUpError
+
+      const newUserId = signUpData?.user?.id
+      if (!newUserId) throw new Error('Não foi possível obter o ID do novo usuário.')
+
+      // Restaura a sessão do Administrador ANTES de gravar o profile,
+      // pois a policy de INSERT em `profiles` exige role Administrador
+      // na sessão ativa no momento da chamada.
+      await restoreAdminSession()
+
+      const { error: profileErr } = await supabase.from('profiles').upsert({
+        id: newUserId,
         nome: payload.nome,
         email: payload.email,
         telefone: payload.telefone || null,
         role: payload.role,
-        ativo: payload.ativo,
-        password: payload.password
-      }
-    })
+        ativo: payload.ativo
+      })
+      if (profileErr) throw profileErr
 
-    if (error) throw new Error(await extractFunctionError(error))
-    if (data?.error) throw new Error(data.error)
-    return data
+      return { id: newUserId, authCreated: true }
+    } catch (err) {
+      await restoreAdminSession()
+
+      const msg = (err.message || '').toLowerCase()
+      if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
+        throw new Error('Este e-mail já está cadastrado.')
+      }
+
+      // Fallback do item 3: salva só o perfil, com UUID próprio, sem
+      // conta de Auth vinculada.
+      const fallbackId = crypto.randomUUID()
+      const { error: profileErr } = await supabase.from('profiles').insert({
+        id: fallbackId,
+        nome: payload.nome,
+        email: payload.email,
+        telefone: payload.telefone || null,
+        role: payload.role,
+        ativo: payload.ativo
+      })
+
+      if (profileErr) {
+        throw new Error(profileErr.message || err.message || 'Erro ao cadastrar usuário.')
+      }
+
+      return { id: fallbackId, authCreated: false }
+    }
   }, [])
 
   /**
