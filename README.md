@@ -72,6 +72,19 @@ O fluxo completo de campo do Vistoriador precisou de 3 tabelas novas — rode no
 - `vistoria_fotos` — fotos anexadas a um ambiente (`ambiente_id`, `url`).
 - `vistorias` ganhou duas colunas novas: `assinatura_url` (URL da assinatura no Storage) e `finalizada_em`.
 
+### "column vistorias.X does not exist" mesmo depois de rodar o `ALTER TABLE`
+
+Se você adicionou uma coluna nova em `vistorias` (ou em qualquer tabela) direto no SQL Editor e o app continua reclamando que a coluna não existe, o mais provável **não é** a coluna em si — é o **cache de schema do PostgREST** (a camada de API REST do Supabase) ainda não ter atualizado. Ele normalmente se atualiza sozinho em alguns segundos, mas às vezes precisa de um empurrão manual:
+
+```sql
+notify pgrst, 'reload schema';
+```
+Rode isso no SQL Editor logo depois de qualquer `ALTER TABLE`/`CREATE TABLE`. Alternativa: Project Settings → API → Restart project.
+
+Por segurança contra esse tipo de dessincronia, as consultas de `vistorias` em `useVistorias.js` e `useVistoriaExecucao.js` agora usam `select('*', imoveis: ..., vistoriador: ...)` em vez de listar cada coluna — assim, colunas que ainda não existem (ou que existem mas o front não conhece) nunca quebram o carregamento da página; o que existir de fato na tabela é o que volta na resposta.
+
+> Nota: se você criou também `fotos_urls`, `observacoes_finais` ou `laudo_preenchido` em `vistorias`, saiba que o app **não usa essas colunas** — o checklist (fotos, observações, itens por estado) é modelado nas tabelas relacionais `vistoria_ambientes` / `vistoria_itens` / `vistoria_fotos` descritas acima, uma linha por ambiente/item/foto. Elas continuam existindo na tabela sem problema (o `select('*')` só as ignora na prática, já que nada na UI as lê), mas não duplicam dado nenhum.
+
 Também é criado um **bucket de Storage público chamado `vistoria-fotos`** (fotos do checklist e a assinatura digital ficam em `vistoria-fotos/<vistoria_id>/...`). Se o SQL Editor do seu projeto não tiver permissão para alterar o schema `storage`, crie o bucket manualmente pelo Dashboard (Storage → New bucket → `vistoria-fotos`, público) e aplique as 3 policies do fim do `schema.sql` em Storage → Policies.
 
 **Arquitetura no front-end:**

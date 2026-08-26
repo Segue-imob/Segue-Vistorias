@@ -17,14 +17,7 @@ export function useVistorias({ vistoriadorId } = {}) {
       .from('vistorias')
       .select(
         `
-        id,
-        tipo,
-        status,
-        data_agendamento,
-        observacoes,
-        imovel_id,
-        vistoriador_id,
-        criado_por,
+        *,
         imoveis:imovel_id ( id, codigo_imovel, endereco, bairro, cidade, inquilino_nome, proprietario_nome ),
         vistoriador:vistoriador_id ( id, nome, email )
       `

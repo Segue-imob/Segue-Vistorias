@@ -35,13 +35,18 @@ export function useVistoriaExecucao(vistoriaId) {
     // em vez de lançar um erro genérico — assim dá pra distinguir "vistoria
     // realmente não existe / RLS bloqueou" (data null, sem error) de um erro
     // de verdade (rede, sintaxe da query etc.), e mostrar a mensagem certa.
+    //
+    // select('*') em vez de listar colunas: evita quebrar o carregamento da
+    // página quando uma coluna opcional (assinatura_url, finalizada_em,
+    // fotos_urls, observacoes_finais, laudo_preenchido, ...) ainda não
+    // existe na tabela — traz tudo o que já existe de fato, sem exigir que
+    // o front saiba antecipadamente o nome exato de cada coluna.
     const [{ data: vistoriaData, error: vErr }, { data: ambientesData, error: aErr }] = await Promise.all([
       supabase
         .from('vistorias')
         .select(
           `
-          id, tipo, status, data_agendamento, observacoes, imovel_id, vistoriador_id,
-          assinatura_url, finalizada_em,
+          *,
           imoveis:imovel_id ( id, codigo_imovel, endereco, bairro, cidade, inquilino_nome, proprietario_nome )
         `
         )
