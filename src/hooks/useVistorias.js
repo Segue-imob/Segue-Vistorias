@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { subscribeToTable } from '../lib/realtimeChannel'
 
 // Hook central de vistorias. Faz join com `imoveis` e `profiles` (vistoriador)
 // e mantém a lista sincronizada via Supabase Realtime.
@@ -39,21 +40,13 @@ export function useVistorias() {
   useEffect(() => {
     fetchVistorias()
 
-    // Realtime: qualquer INSERT/UPDATE/DELETE na tabela reflete no estado
-    const channel = supabase
-      .channel('vistorias-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'vistorias' },
-        () => {
-          fetchVistorias()
-        }
-      )
-      .subscribe()
+    // Ouve o canal Realtime único e compartilhado (src/lib/realtimeChannel.js)
+    // em vez de criar um novo canal por instância do hook.
+    const unsubscribe = subscribeToTable('vistorias', () => {
+      fetchVistorias()
+    })
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return unsubscribe
   }, [fetchVistorias])
 
   const createVistoria = useCallback(async (payload) => {

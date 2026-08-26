@@ -59,6 +59,6 @@ supabase/
 
 ## Notas de implementação
 
-- **Realtime**: `useVistorias` e `useProfiles` assinam mudanças via `supabase.channel(...).on('postgres_changes', ...)`, então múltiplos usuários veem atualizações automaticamente.
+- **Realtime (canal único)**: para evitar o erro `cannot add postgres_changes callbacks ... after subscribe()` — que acontece quando mais de um componente monta o mesmo hook (ex.: `useProfiles` é chamado tanto em `Agenda.jsx` quanto dentro de `VistoriaModal.jsx`, criando canais duplicados — todo o Realtime do app passa por **um único canal singleton** em `src/lib/realtimeChannel.js`, chamado `schema-db-changes`. Esse módulo registra **todos** os `.on('postgres_changes', ...)` (para `profiles`, `vistorias` e `imoveis`) **antes** do único `.subscribe()` da cadeia, e expõe `subscribeToTable(table, callback)` para que os hooks (`useVistorias`, `useProfiles`, `useImoveis`) apenas "assinem" eventos sem criar canais próprios.
 - **"Deletar" vistoria**: por padrão o botão de status "Cancelada" faz um soft-delete (`status = 'cancelada'`), preservando histórico. Ajuste `useVistorias.deleteVistoria` se preferir exclusão física (`.delete()`).
 - **Autenticação**: o app assume que o login (Supabase Auth) já existe/roda antes do usuário chegar aqui. Não há tela de login neste pacote — o `LogOut` no rodapé da Sidebar é um placeholder pronto para conectar em `supabase.auth.signOut()`.

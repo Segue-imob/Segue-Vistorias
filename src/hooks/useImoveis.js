@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { subscribeToTable } from '../lib/realtimeChannel'
 
 export function useImoveis() {
   const [imoveis, setImoveis] = useState([])
@@ -18,6 +19,13 @@ export function useImoveis() {
 
   useEffect(() => {
     fetchImoveis()
+
+    // Ouve o canal Realtime único e compartilhado (src/lib/realtimeChannel.js)
+    const unsubscribe = subscribeToTable('imoveis', () => {
+      fetchImoveis()
+    })
+
+    return unsubscribe
   }, [fetchImoveis])
 
   const createImovel = useCallback(async (payload) => {

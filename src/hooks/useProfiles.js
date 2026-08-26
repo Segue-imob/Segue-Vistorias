@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { subscribeToTable } from '../lib/realtimeChannel'
 
 export function useProfiles() {
   const [profiles, setProfiles] = useState([])
@@ -25,16 +26,15 @@ export function useProfiles() {
   useEffect(() => {
     fetchProfiles()
 
-    const channel = supabase
-      .channel('profiles-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-        fetchProfiles()
-      })
-      .subscribe()
+    // Ouve o canal Realtime único e compartilhado (src/lib/realtimeChannel.js)
+    // em vez de criar um novo canal por instância do hook — evita o erro
+    // "cannot add postgres_changes callbacks ... after subscribe()" quando
+    // useProfiles() é usado em mais de um componente montado ao mesmo tempo.
+    const unsubscribe = subscribeToTable('profiles', () => {
+      fetchProfiles()
+    })
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return unsubscribe
   }, [fetchProfiles])
 
   // Vistoriadores = usuários ativos com role "Vistoriador" (usado nos filtros/agenda)
