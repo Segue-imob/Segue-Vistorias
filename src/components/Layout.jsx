@@ -1,16 +1,15 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { CalendarDays, ClipboardList, Users2, Building2, Menu, X } from 'lucide-react'
+import { Building2, Menu, X } from 'lucide-react'
 import Sidebar from './Sidebar'
-
-const NAV_ITEMS = [
-  { to: '/agenda', label: 'Agenda', icon: CalendarDays },
-  { to: '/vistorias', label: 'Vistorias', icon: ClipboardList },
-  { to: '/usuarios', label: 'Usuários', icon: Users2 }
-]
+import { NAV_ITEMS } from '../lib/navItems'
+import { useAuth } from '../context/AuthContext'
+import { PERMISSIONS } from '../lib/permissions'
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { role } = useAuth()
+  const visibleItems = NAV_ITEMS.filter((item) => PERMISSIONS[item.permission](role))
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -35,7 +34,7 @@ export default function Layout() {
 
       {mobileOpen && (
         <div className="border-b border-slate-200 bg-white px-3 py-2 md:hidden">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          {visibleItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

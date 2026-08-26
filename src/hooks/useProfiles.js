@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { subscribeToTable } from '../lib/realtimeChannel'
+import { isAdmin, isVistoriador } from '../lib/permissions'
 
 export function useProfiles() {
   const [profiles, setProfiles] = useState([])
@@ -37,8 +38,9 @@ export function useProfiles() {
     return unsubscribe
   }, [fetchProfiles])
 
-  // Vistoriadores = usuários ativos com role "Vistoriador" (usado nos filtros/agenda)
-  const vistoriadores = profiles.filter((p) => p.role === 'Vistoriador' && p.ativo)
+  // Podem ser selecionados como "vistoriador responsável" ao agendar:
+  // usuários ativos com role Vistoriador ou Administrador.
+  const vistoriadores = profiles.filter((p) => p.ativo && (isVistoriador(p.role) || isAdmin(p.role)))
 
   const createProfile = useCallback(async (payload) => {
     const { data, error } = await supabase.from('profiles').insert(payload).select()

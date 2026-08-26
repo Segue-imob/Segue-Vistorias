@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import Modal from './Modal'
 import { PERFIS_USUARIO } from '../lib/constants'
+import { normalizeRole } from '../lib/permissions'
 
-const emptyForm = { nome: '', email: '', telefone: '', role: PERFIS_USUARIO[0], ativo: true }
+const emptyForm = { nome: '', email: '', telefone: '', role: 'vistoriador', ativo: true }
 
 export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
   const isEdit = Boolean(usuario)
@@ -19,7 +20,9 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
               nome: usuario.nome || '',
               email: usuario.email || '',
               telefone: usuario.telefone || '',
-              role: usuario.role,
+              // Normaliza para o valor canônico ('admin'/'gestao'/'vistoriador')
+              // caso o registro tenha sido salvo com o rótulo em português.
+              role: normalizeRole(usuario.role) || 'vistoriador',
               ativo: usuario.ativo
             }
           : emptyForm
@@ -88,8 +91,8 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
           <label className="label-field">Perfil / Função *</label>
           <select className="input-field" value={form.role} onChange={handleChange('role')}>
             {PERFIS_USUARIO.map((p) => (
-              <option key={p} value={p}>
-                {p}
+              <option key={p.value} value={p.value}>
+                {p.label}
               </option>
             ))}
           </select>

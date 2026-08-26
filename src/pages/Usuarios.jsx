@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, Loader2, Pencil, Search } from 'lucide-react'
 import { useProfiles } from '../hooks/useProfiles'
 import UsuarioModal from '../components/UsuarioModal'
+import { getRoleLabel } from '../lib/permissions'
 
 export default function Usuarios() {
   const { profiles, loading, createProfile, updateProfile, toggleAtivo } = useProfiles()
@@ -90,7 +91,7 @@ export default function Usuarios() {
                   <td className="px-4 py-3 text-slate-600">{user.email}</td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      {user.role}
+                      {getRoleLabel(user.role)}
                     </span>
                   </td>
                   <td className="px-4 py-3">

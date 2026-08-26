@@ -52,7 +52,14 @@ export const KANBAN_COLUMNS = [
 
 export const TIPOS_VISTORIA = ['Entrada', 'Saída', 'Conferência']
 
-export const PERFIS_USUARIO = ['Administrador', 'Gestor', 'Vistoriador', 'Corretor']
+// Valores canônicos gravados na coluna `role` de profiles + rótulo em
+// português exibido na UI. Veja src/lib/permissions.js para a lógica
+// de normalização (aceita também o rótulo em português já salvo no banco).
+export const PERFIS_USUARIO = [
+  { value: 'admin', label: 'Administrador' },
+  { value: 'gestao', label: 'Gestão' },
+  { value: 'vistoriador', label: 'Vistoriador' }
+]
 
 export function getStatusMeta(status) {
   return STATUS[status] || STATUS.agendada

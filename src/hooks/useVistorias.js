@@ -4,14 +4,16 @@ import { subscribeToTable } from '../lib/realtimeChannel'
 
 // Hook central de vistorias. Faz join com `imoveis` e `profiles` (vistoriador)
 // e mantém a lista sincronizada via Supabase Realtime.
-export function useVistorias() {
+// Passe { vistoriadorId } para restringir a consulta às vistorias de um
+// vistoriador específico (usado na tela "Minhas Vistorias").
+export function useVistorias({ vistoriadorId } = {}) {
   const [vistorias, setVistorias] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchVistorias = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    let query = supabase
       .from('vistorias')
       .select(
         `
@@ -28,6 +30,12 @@ export function useVistorias() {
       )
       .order('data_agendamento', { ascending: true })
 
+    if (vistoriadorId) {
+      query = query.eq('vistoriador_id', vistoriadorId)
+    }
+
+    const { data, error } = await query
+
     if (error) {
       setError(error)
     } else {
@@ -35,7 +43,7 @@ export function useVistorias() {
       setError(null)
     }
     setLoading(false)
-  }, [])
+  }, [vistoriadorId])
 
   useEffect(() => {
     fetchVistorias()

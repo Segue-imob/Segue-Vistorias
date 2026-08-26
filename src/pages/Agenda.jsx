@@ -5,10 +5,15 @@ import DayAgendaPanel from '../components/DayAgendaPanel'
 import VistoriaModal from '../components/VistoriaModal'
 import { useVistorias } from '../hooks/useVistorias'
 import { useProfiles } from '../hooks/useProfiles'
+import { useAuth } from '../context/AuthContext'
+import { PERMISSIONS } from '../lib/permissions'
 import { TIPOS_VISTORIA } from '../lib/constants'
-import { Filter } from 'lucide-react'
+import { Filter, Plus } from 'lucide-react'
 
 export default function Agenda() {
+  const { role } = useAuth()
+  const canSchedule = PERMISSIONS.scheduleVistoria(role)
+
   const { vistorias, createVistoria } = useVistorias()
   const { vistoriadores } = useProfiles()
 
@@ -62,6 +67,11 @@ export default function Agenda() {
               </option>
             ))}
           </select>
+          {canSchedule && (
+            <button type="button" onClick={() => setModalOpen(true)} className="btn-primary !py-2">
+              <Plus size={15} /> Agendar Vistoria
+            </button>
+          )}
         </div>
       </div>
 
@@ -76,16 +86,18 @@ export default function Agenda() {
         <DayAgendaPanel
           day={selectedDay}
           vistorias={filteredVistorias}
-          onAddClick={() => setModalOpen(true)}
+          onAddClick={canSchedule ? () => setModalOpen(true) : null}
         />
       </div>
 
-      <VistoriaModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={createVistoria}
-        defaultDate={format(selectedDay, 'yyyy-MM-dd')}
-      />
+      {canSchedule && (
+        <VistoriaModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSubmit={createVistoria}
+          defaultDate={format(selectedDay, 'yyyy-MM-dd')}
+        />
+      )}
     </div>
   )
 }

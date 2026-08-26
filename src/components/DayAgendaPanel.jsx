@@ -17,20 +17,24 @@ export default function DayAgendaPanel({ day, vistorias, onAddClick }) {
             {format(day, "d 'de' MMMM", { locale: ptBR })}
           </h3>
         </div>
-        <button
-          type="button"
-          onClick={onAddClick}
-          className="rounded-lg bg-brand-accent/10 p-2 text-brand-accent hover:bg-brand-accent/20"
-          title="Agendar vistoria neste dia"
-        >
-          <Plus size={16} />
-        </button>
+        {onAddClick && (
+          <button
+            type="button"
+            onClick={onAddClick}
+            className="rounded-lg bg-brand-accent/10 p-2 text-brand-accent hover:bg-brand-accent/20"
+            title="Agendar vistoria neste dia"
+          >
+            <Plus size={16} />
+          </button>
+        )}
       </div>
 
       {dayVistorias.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
           <p className="text-sm font-medium text-slate-500">Nenhuma vistoria agendada</p>
-          <p className="mt-1 text-xs text-slate-400">Clique no + para agendar uma vistoria neste dia.</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {onAddClick ? 'Clique no + para agendar uma vistoria neste dia.' : 'Nenhuma vistoria neste dia.'}
+          </p>
         </div>
       ) : (
         <ul className="space-y-3 overflow-y-auto">
