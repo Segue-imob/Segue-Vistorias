@@ -1,8 +1,28 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Mail, Lock, Loader2, Building2, CalendarCheck2, LayoutGrid, ShieldCheck } from 'lucide-react'
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Loader2,
+  Building2,
+  CalendarCheck2,
+  LayoutGrid,
+  ShieldCheck
+} from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
+import { mapAuthError } from '../lib/authErrors'
+
+// Conta de teste opcional: por padrão o botão fica oculto (evita expor
+// um atalho de login em produção). Para exibi-lo, defina no .env:
+//   VITE_SHOW_TEST_LOGIN=true
+//   VITE_TEST_LOGIN_EMAIL=rogerbsjr@gmail.com   (opcional, esse já é o padrão)
+// O botão só preenche o e-mail — a senha continua sendo digitada pelo
+// usuário, para não deixar nenhuma credencial embutida no código do site.
+const SHOW_TEST_LOGIN = import.meta.env.VITE_SHOW_TEST_LOGIN === 'true'
+const TEST_LOGIN_EMAIL = import.meta.env.VITE_TEST_LOGIN_EMAIL || 'rogerbsjr@gmail.com'
 
 function FeatureCard({ icon: Icon, title, desc }) {
   return (
@@ -18,9 +38,11 @@ export default function Login() {
   const { session, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const passwordInputRef = useRef(null)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -41,16 +63,27 @@ export default function Login() {
     }
 
     setSubmitting(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setSubmitting(false)
-
-    if (error) {
-      setErrorMsg('E-mail ou senha inválidos. Verifique os dados e tente novamente.')
-      return
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setErrorMsg(mapAuthError(error))
+        return
+      }
+      // App.jsx decide a rota final por role (Agenda, Minhas Vistorias, etc.)
+      navigate('/', { replace: true })
+    } catch (err) {
+      // Falhas de rede (ex.: sem internet, Supabase fora do ar) caem aqui,
+      // já que podem lançar exceção em vez de retornar `error`.
+      setErrorMsg(mapAuthError(err))
+    } finally {
+      setSubmitting(false)
     }
+  }
 
-    // App.jsx decide a rota final por role (Agenda, Minhas Vistorias, etc.)
-    navigate('/', { replace: true })
+  const handleFillTestAccount = () => {
+    setEmail(TEST_LOGIN_EMAIL)
+    setErrorMsg('')
+    passwordInputRef.current?.focus()
   }
 
   return (
@@ -106,19 +139,35 @@ export default function Login() {
                     className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                   />
                   <input
+                    ref={passwordInputRef}
                     id="login-password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    className="input-field !pl-9"
+                    className="input-field !pl-9 !pr-10"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                    title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
               </div>
 
               {errorMsg && (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{errorMsg}</p>
+                <p
+                  role="alert"
+                  className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+                >
+                  {errorMsg}
+                </p>
               )}
 
               <button type="submit" disabled={submitting} className="btn-primary w-full justify-center !py-2.5">
@@ -126,6 +175,16 @@ export default function Login() {
                 Entrar
               </button>
             </form>
+
+            {SHOW_TEST_LOGIN && (
+              <button
+                type="button"
+                onClick={handleFillTestAccount}
+                className="mt-4 block w-full text-center text-xs font-medium text-slate-400 transition hover:text-brand-accent hover:underline"
+              >
+                Entrar com conta de teste
+              </button>
+            )}
           </div>
 
           <p className="mt-6 text-center text-xs text-slate-400">
