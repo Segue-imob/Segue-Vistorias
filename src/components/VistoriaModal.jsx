@@ -140,7 +140,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
           </div>
 
           {showNovoImovel && !isEdit && (
-            <div className="mb-3 space-y-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
+            <div className="mb-3 space-y-2 rounded-lg border border-dashed border-brand-border bg-brand-cream p-3">
               <div className="grid grid-cols-2 gap-2">
                 <input
                   placeholder="Código *"
@@ -219,7 +219,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
                 className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
                   form.tipo === tipo
                     ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    : 'border-brand-border text-slate-600 hover:bg-brand-cream'
                 }`}
               >
                 {tipo}

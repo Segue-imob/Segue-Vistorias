@@ -12,11 +12,11 @@ export default function Layout() {
   const visibleItems = NAV_ITEMS.filter((item) => PERMISSIONS[item.permission](role))
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-white">
       <Sidebar />
 
       {/* Topbar mobile */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-brand-border bg-white px-4 py-3 md:hidden">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-accent">
             <Building2 size={16} className="text-white" strokeWidth={2.5} />
@@ -26,14 +26,14 @@ export default function Layout() {
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
-          className="rounded-md p-2 text-slate-600 hover:bg-slate-100"
+          className="rounded-md p-2 text-slate-600 hover:bg-brand-cream"
         >
           {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </header>
 
       {mobileOpen && (
-        <div className="border-b border-slate-200 bg-white px-3 py-2 md:hidden">
+        <div className="border-b border-brand-border bg-white px-3 py-2 md:hidden">
           {visibleItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}

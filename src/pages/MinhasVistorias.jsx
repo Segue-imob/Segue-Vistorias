@@ -23,13 +23,13 @@ function VistoriaCard({ vistoria, tab, onAceitar, aceitando }) {
 
   return (
     <div
-      className={`card flex flex-col gap-3 p-4 ${isNavigable ? 'cursor-pointer active:bg-slate-50' : ''}`}
+      className={`card flex flex-col gap-3 p-4 ${isNavigable ? 'cursor-pointer active:bg-brand-cream' : ''}`}
       onClick={isNavigable ? abrirChecklist : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="mb-1 flex flex-wrap items-center gap-2">
-            <p className="font-semibold text-slate-900">{vistoria.imoveis?.codigo_imovel}</p>
+            <p className="font-semibold text-brand-900">{vistoria.imoveis?.codigo_imovel}</p>
             <StatusBadge status={vistoria.status} size="sm" />
           </div>
           <p className="flex items-center gap-1 text-xs text-slate-500">
@@ -103,20 +103,20 @@ export default function MinhasVistorias() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Minhas vistorias</h1>
+        <h1 className="text-xl font-bold text-brand-900">Minhas vistorias</h1>
         <p className="text-sm text-slate-500">
           Vistorias atribuídas a você{profile?.nome ? `, ${profile.nome}` : ''}.
         </p>
       </div>
 
-      <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1">
+      <div className="flex gap-1 rounded-lg border border-brand-border bg-white p-1">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
             className={`flex-1 rounded-md px-2 py-2 text-xs font-semibold transition sm:text-sm ${
-              activeTab === tab.key ? 'bg-brand-accent text-white' : 'text-slate-500 hover:bg-slate-50'
+              activeTab === tab.key ? 'bg-brand-accent text-white' : 'text-slate-500 hover:bg-brand-cream'
             }`}
           >
             {tab.label}

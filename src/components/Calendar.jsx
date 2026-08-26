@@ -30,28 +30,28 @@ export default function Calendar({ currentMonth, onMonthChange, vistorias, selec
   return (
     <div className="card p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-bold capitalize text-slate-900">
+        <h2 className="text-base font-bold capitalize text-brand-900">
           {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
         </h2>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => onMonthChange(subMonths(currentMonth, 1))}
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-brand-cream"
           >
             <ChevronLeft size={18} />
           </button>
           <button
             type="button"
             onClick={() => onMonthChange(new Date())}
-            className="rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100"
+            className="rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-brand-cream"
           >
             Hoje
           </button>
           <button
             type="button"
             onClick={() => onMonthChange(addMonths(currentMonth, 1))}
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-brand-cream"
           >
             <ChevronRight size={18} />
           </button>
@@ -80,7 +80,7 @@ export default function Calendar({ currentMonth, onMonthChange, vistorias, selec
               className={`flex min-h-[92px] flex-col items-start rounded-lg border p-1.5 text-left align-top transition ${
                 selected
                   ? 'border-brand-accent bg-brand-accent/5 ring-1 ring-brand-accent'
-                  : 'border-transparent hover:bg-slate-50'
+                  : 'border-transparent hover:bg-brand-cream'
               } ${!inMonth ? 'opacity-40' : ''}`}
             >
               <span

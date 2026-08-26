@@ -30,13 +30,13 @@ export default function FotoUploader({ fotos, onUpload, onRemove }) {
         {fotos.map((foto) => (
           <div
             key={foto.id}
-            className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200"
+            className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-brand-border"
           >
             <img src={foto.url} alt="Foto do ambiente" className="h-full w-full object-cover" />
             <button
               type="button"
               onClick={() => onRemove(foto.id)}
-              className="absolute right-0.5 top-0.5 rounded-full bg-slate-900/70 p-0.5 text-white transition hover:bg-red-600"
+              className="absolute right-0.5 top-0.5 rounded-full bg-brand-900/70 p-0.5 text-white transition hover:bg-red-600"
               title="Remover foto"
             >
               <X size={11} />
@@ -48,7 +48,7 @@ export default function FotoUploader({ fotos, onUpload, onRemove }) {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 text-slate-400 transition hover:bg-slate-50"
+          className="flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-brand-border text-slate-400 transition hover:bg-brand-cream"
         >
           {uploading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
           <span className="text-[9px] font-semibold">Foto</span>

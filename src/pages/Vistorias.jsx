@@ -68,7 +68,7 @@ export default function Vistorias() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Vistorias</h1>
+          <h1 className="text-xl font-bold text-brand-900">Vistorias</h1>
           <p className="text-sm text-slate-500">Gerencie todas as vistorias da imobiliária.</p>
         </div>
         <button type="button" onClick={openCreate} className="btn-primary">
@@ -87,12 +87,12 @@ export default function Vistorias() {
           />
         </div>
 
-        <div className="flex items-center gap-1 self-start rounded-lg border border-slate-200 bg-white p-1">
+        <div className="flex items-center gap-1 self-start rounded-lg border border-brand-border bg-white p-1">
           <button
             type="button"
             onClick={() => setView('lista')}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              view === 'lista' ? 'bg-brand-accent text-white' : 'text-slate-500 hover:bg-slate-50'
+              view === 'lista' ? 'bg-brand-accent text-white' : 'text-slate-500 hover:bg-brand-cream'
             }`}
           >
             <LayoutList size={14} /> Lista
@@ -101,7 +101,7 @@ export default function Vistorias() {
             type="button"
             onClick={() => setView('kanban')}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              view === 'kanban' ? 'bg-brand-accent text-white' : 'text-slate-500 hover:bg-slate-50'
+              view === 'kanban' ? 'bg-brand-accent text-white' : 'text-slate-500 hover:bg-brand-cream'
             }`}
           >
             <LayoutGrid size={14} /> Kanban

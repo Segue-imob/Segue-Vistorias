@@ -8,10 +8,10 @@ function KanbanCard({ vistoria, onDragStart, onEdit, onDelete, canEdit, canDelet
     <div
       draggable
       onDragStart={(e) => onDragStart(e, vistoria.id)}
-      className="cursor-grab rounded-xl border border-slate-100 bg-white p-3 shadow-card transition hover:shadow-md active:cursor-grabbing"
+      className="cursor-grab rounded-xl border border-brand-border/70 bg-white p-3 shadow-card transition hover:shadow-md active:cursor-grabbing"
     >
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-800">{vistoria.imoveis?.codigo_imovel}</span>
+        <span className="text-xs font-bold text-brand-900">{vistoria.imoveis?.codigo_imovel}</span>
 
         {/* draggable=false + stopPropagation evita que um clique nesses
             botões seja interpretado como início do drag do card */}
@@ -24,7 +24,7 @@ function KanbanCard({ vistoria, onDragStart, onEdit, onDelete, canEdit, canDelet
             <button
               type="button"
               onClick={() => onEdit(vistoria)}
-              className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-accent"
+              className="rounded p-1 text-slate-400 hover:bg-brand-cream hover:text-brand-accent"
               title="Editar vistoria"
             >
               <Pencil size={12} />
@@ -88,14 +88,14 @@ export default function KanbanBoard({ vistorias, onChangeStatus, onEdit, onDelet
             }}
             onDragLeave={() => setDragOverCol(null)}
             onDrop={(e) => handleDrop(e, col.status)}
-            className={`flex flex-col rounded-xl2 border bg-slate-50/60 p-3 transition ${
-              dragOverCol === col.status ? 'border-brand-accent bg-brand-accent/5' : 'border-slate-200'
+            className={`flex flex-col rounded-xl2 border bg-brand-cream/60 p-3 transition ${
+              dragOverCol === col.status ? 'border-brand-accent bg-brand-accent/5' : 'border-brand-border'
             }`}
           >
             <div className="mb-3 flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: meta.color }} />
-                <h3 className="text-sm font-bold text-slate-800">{col.title}</h3>
+                <h3 className="text-sm font-bold text-brand-900">{col.title}</h3>
               </div>
               <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-500 shadow-sm">
                 {items.length}
@@ -104,7 +104,7 @@ export default function KanbanBoard({ vistorias, onChangeStatus, onEdit, onDelet
 
             <div className="flex min-h-[120px] flex-1 flex-col gap-2.5">
               {items.length === 0 ? (
-                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 py-8 text-xs text-slate-400">
+                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-brand-border py-8 text-xs text-slate-400">
                   Arraste vistorias para cá
                 </div>
               ) : (

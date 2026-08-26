@@ -9,11 +9,11 @@ export default function AmbienteSummaryCard({ ambiente, onVistoriar, onRemove, r
   return (
     <div className="card flex items-center justify-between gap-3 p-4">
       <button type="button" onClick={onVistoriar} className="min-w-0 flex-1 text-left">
-        <p className="text-sm font-bold text-slate-900">{ambiente.ambiente}</p>
+        <p className="text-sm font-bold text-brand-900">{ambiente.ambiente}</p>
         <p className="mt-0.5 text-xs font-medium text-slate-500">
           {avaliados}/{total} itens avaliados
         </p>
-        <div className="mt-2 h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-slate-100">
+        <div className="mt-2 h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-brand-cream">
           <div
             className="h-full rounded-full bg-brand-accent transition-all"
             style={{ width: `${progresso}%` }}

@@ -20,7 +20,7 @@ export default function Modal({ open, onClose, title, subtitle, children, maxWid
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-brand-900/50 backdrop-blur-[2px]"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -29,15 +29,15 @@ export default function Modal({ open, onClose, title, subtitle, children, maxWid
         role="dialog"
         aria-modal="true"
       >
-        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-100 bg-white px-6 py-4">
+        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-brand-border/70 bg-white px-6 py-4">
           <div>
-            <h2 className="text-base font-bold text-slate-900">{title}</h2>
+            <h2 className="text-base font-bold text-brand-900">{title}</h2>
             {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-brand-cream hover:text-slate-700"
           >
             <X size={18} />
           </button>

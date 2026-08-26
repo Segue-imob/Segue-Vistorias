@@ -47,13 +47,13 @@ export default function FinalizarVistoriaModal({ open, onClose, ambientes, onCon
       maxWidth="max-w-lg"
     >
       <div className="space-y-4">
-        <div className="max-h-56 space-y-3 overflow-y-auto rounded-lg border border-slate-100 p-3">
+        <div className="max-h-56 space-y-3 overflow-y-auto rounded-lg border border-brand-border/70 p-3">
           {ambientes.length === 0 ? (
             <p className="text-sm text-slate-400">Nenhum ambiente vistoriado ainda.</p>
           ) : (
             ambientes.map((a) => (
-              <div key={a.id} className="border-b border-slate-50 pb-2 last:border-0 last:pb-0">
-                <p className="text-sm font-semibold text-slate-800">{a.ambiente}</p>
+              <div key={a.id} className="border-b border-brand-border/50 pb-2 last:border-0 last:pb-0">
+                <p className="text-sm font-semibold text-brand-900">{a.ambiente}</p>
 
                 <div className="mt-1.5 space-y-1.5">
                   {(a.vistoria_itens || []).map((it) => {
@@ -75,7 +75,7 @@ export default function FinalizarVistoriaModal({ open, onClose, ambientes, onCon
                           )}
                           <span
                             className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              meta ? `${meta.bg} ${meta.text}` : 'bg-slate-100 text-slate-400'
+                              meta ? `${meta.bg} ${meta.text}` : 'bg-brand-cream text-slate-400'
                             }`}
                           >
                             {meta ? meta.label : 'Não avaliado'}

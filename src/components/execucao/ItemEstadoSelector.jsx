@@ -12,7 +12,7 @@ export default function ItemEstadoSelector({ value, onChange }) {
             type="button"
             onClick={() => onChange(key)}
             className={`rounded-md border px-1.5 py-1.5 text-[11px] font-semibold transition ${
-              active ? 'border-transparent text-white' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+              active ? 'border-transparent text-white' : 'border-brand-border text-slate-500 hover:bg-brand-cream'
             }`}
             style={active ? { backgroundColor: meta.color } : undefined}
           >

@@ -132,6 +132,23 @@ Não é preciso configurar `SUPABASE_URL`, `SUPABASE_ANON_KEY` ou `SUPABASE_SERV
 
 Definida em `src/lib/constants.js` (`STATUS`) — única fonte de verdade usada por todos os componentes.
 
+## Identidade visual da marca
+
+Paleta oficial configurada em `tailwind.config.js` (`theme.extend.colors.brand`) — é a única fonte de verdade para essas cores; nenhum componente usa hex de marca solto, tudo referencia o token:
+
+| Token Tailwind              | Hex       | Uso                                              |
+|------------------------------|-----------|---------------------------------------------------|
+| `brand-accent`                | `#a64324` | Destaque / ação principal (botões primários, item ativo da Sidebar) |
+| `brand-900`                   | `#261912` | Fundo da Sidebar **e** cor de texto escuro em todo o app (títulos, texto principal) |
+| `brand-700` / `brand-accentDark` | `#593825` | Secundária / hover (hover de botões primários, hover de itens do menu) |
+| `brand-cream`                  | `#f1ede5` | Fundo interno de cards/badges/hovers (nunca fundo de tela inteira — esse é branco) |
+| `brand-border`                 | `#bfb8ae` | Bordas e divisores de cards, tabelas e inputs |
+| `brand-accentLight`            | `#c9836a` | Tom claro do terracota (avatar da Sidebar, glow do painel de login) |
+
+Fundos de **tela e modal continuam brancos** (`#ffffff`) — só o conteúdo *dentro* deles (cards, badges, linhas de tabela em hover, trilhas de progresso) usa `brand-cream`. As cores de status (tabela acima) são um sistema à parte e não mudam com o rebrand.
+
+Como todo o app já usava os tokens `brand-*` (não classes soltas tipo `indigo-600`), trocar os valores em `tailwind.config.js` já recolore automaticamente botões, estados ativos e realces em todo o app — o trabalho manual ficou em trocar os `slate-50/100/200/300` (fundos e bordas neutras) por `brand-cream`/`brand-border`, e `slate-900/800` (texto escuro) por `brand-900`.
+
 ## 1. Configurar o Supabase
 
 Rode o script `supabase/schema.sql` no **SQL Editor** do seu projeto Supabase. Ele cria as tabelas `profiles`, `imoveis`, `vistorias` (+ tabelas do checklist de vistoria) com os nomes de coluna que o front-end espera, habilita Realtime e cria as policies de RLS por role. Se as tabelas já existirem, confira se os nomes de coluna batem — o front consome:

@@ -153,13 +153,13 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
         )}
 
         {isEdit && (
-          <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+          <p className="rounded-lg bg-brand-cream px-3 py-2 text-xs text-slate-500">
             Para alterar a senha deste usuário, use a opção <strong>Alterar senha</strong> no menu de ações
             da lista.
           </p>
         )}
 
-        <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3.5 py-2.5">
+        <div className="flex items-center justify-between rounded-lg border border-brand-border px-3.5 py-2.5">
           <div>
             <p className="text-sm font-medium text-slate-700">Usuário ativo</p>
             <p className="text-xs text-slate-400">Usuários inativos não aparecem nos filtros de agenda.</p>
@@ -167,7 +167,7 @@ export default function UsuarioModal({ open, onClose, onSubmit, usuario }) {
           <button
             type="button"
             onClick={() => setForm((f) => ({ ...f, ativo: !f.ativo }))}
-            className={`relative h-6 w-11 rounded-full transition ${form.ativo ? 'bg-brand-accent' : 'bg-slate-300'}`}
+            className={`relative h-6 w-11 rounded-full transition ${form.ativo ? 'bg-brand-accent' : 'bg-brand-border'}`}
           >
             <span
               className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${

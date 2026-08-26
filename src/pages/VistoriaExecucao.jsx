@@ -134,12 +134,12 @@ export default function VistoriaExecucao() {
         <button
           type="button"
           onClick={() => (activeAmbiente ? setActiveAmbienteId(null) : navigate('/minhas-vistorias'))}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+          className="rounded-lg p-2 text-slate-500 hover:bg-brand-cream"
         >
           <ArrowLeft size={18} />
         </button>
         <div className="min-w-0">
-          <p className="truncate text-base font-bold text-slate-900">
+          <p className="truncate text-base font-bold text-brand-900">
             {activeAmbiente ? activeAmbiente.ambiente : vistoria.imoveis?.codigo_imovel}
           </p>
           <p className="truncate text-xs text-slate-500">
@@ -228,7 +228,7 @@ export default function VistoriaExecucao() {
 
           {isEncerrada && (
             <div className="card border-l-4 border-l-[#4CAF50] p-4">
-              <p className="text-sm font-semibold text-slate-800">Esta vistoria já foi encerrada.</p>
+              <p className="text-sm font-semibold text-brand-900">Esta vistoria já foi encerrada.</p>
               <p className="mt-0.5 text-xs text-slate-500">O checklist abaixo está em modo somente leitura.</p>
             </div>
           )}
@@ -292,7 +292,7 @@ export default function VistoriaExecucao() {
       )}
 
       {!isEncerrada && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white p-3 md:pl-64">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-brand-border bg-white p-3 md:pl-64">
           <div className="mx-auto max-w-[1400px]">
             <button
               type="button"

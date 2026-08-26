@@ -21,7 +21,7 @@ export default function VistoriaListView({ vistorias, onChangeStatus, onEdit, on
     <div className="card overflow-x-auto">
       <table className="w-full min-w-[720px] text-left text-sm">
         <thead>
-          <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <tr className="border-b border-brand-border/70 text-xs font-semibold uppercase tracking-wide text-slate-400">
             <th className="px-4 py-3">Imóvel</th>
             <th className="px-4 py-3">Tipo</th>
             <th className="px-4 py-3">Data / hora</th>
@@ -36,9 +36,9 @@ export default function VistoriaListView({ vistorias, onChangeStatus, onEdit, on
             const podeExcluir = canDelete
 
             return (
-              <tr key={v.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
+              <tr key={v.id} className="border-b border-brand-border/50 last:border-0 hover:bg-brand-cream/60">
                 <td className="px-4 py-3">
-                  <p className="font-semibold text-slate-900">{v.imoveis?.codigo_imovel}</p>
+                  <p className="font-semibold text-brand-900">{v.imoveis?.codigo_imovel}</p>
                   <p className="flex items-center gap-1 text-xs text-slate-500">
                     <MapPin size={11} /> {v.imoveis?.endereco}
                   </p>
@@ -57,12 +57,12 @@ export default function VistoriaListView({ vistorias, onChangeStatus, onEdit, on
                   <button
                     type="button"
                     onClick={() => setOpenMenuId(openMenuId === v.id ? null : v.id)}
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100"
+                    className="rounded-md p-1.5 text-slate-400 hover:bg-brand-cream"
                   >
                     <MoreVertical size={16} />
                   </button>
                   {openMenuId === v.id && (
-                    <div className="absolute right-4 z-10 mt-1 w-52 rounded-lg border border-slate-100 bg-white py-1 shadow-modal">
+                    <div className="absolute right-4 z-10 mt-1 w-52 rounded-lg border border-brand-border/70 bg-white py-1 shadow-modal">
                       {podeEditar && (
                         <button
                           type="button"
@@ -70,7 +70,7 @@ export default function VistoriaListView({ vistorias, onChangeStatus, onEdit, on
                             onEdit(v)
                             setOpenMenuId(null)
                           }}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-slate-600 hover:bg-slate-50"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-slate-600 hover:bg-brand-cream"
                         >
                           <Pencil size={13} /> Editar vistoria
                         </button>
@@ -87,7 +87,7 @@ export default function VistoriaListView({ vistorias, onChangeStatus, onEdit, on
                           <Trash2 size={13} /> Excluir vistoria
                         </button>
                       )}
-                      {(podeEditar || podeExcluir) && <div className="my-1 border-t border-slate-100" />}
+                      {(podeEditar || podeExcluir) && <div className="my-1 border-t border-brand-border/70" />}
                       {STATUS_ORDER.map((status) => (
                         <button
                           key={status}
@@ -96,7 +96,7 @@ export default function VistoriaListView({ vistorias, onChangeStatus, onEdit, on
                             onChangeStatus(v.id, status)
                             setOpenMenuId(null)
                           }}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-slate-600 hover:bg-slate-50"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-slate-600 hover:bg-brand-cream"
                         >
                           <span
                             className="h-1.5 w-1.5 rounded-full"

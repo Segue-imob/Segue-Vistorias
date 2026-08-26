@@ -89,7 +89,7 @@ export default function Login() {
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       {/* Coluna esquerda — formulário de acesso */}
-      <div className="flex items-center justify-center bg-slate-50 px-6 py-12">
+      <div className="flex items-center justify-center bg-white px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-accent">
@@ -102,7 +102,7 @@ export default function Login() {
           </div>
 
           <div className="card p-7 sm:p-8">
-            <h1 className="text-lg font-bold text-slate-900">Bem-vindo de volta</h1>
+            <h1 className="text-lg font-bold text-brand-900">Bem-vindo de volta</h1>
             <p className="mt-1 text-sm text-slate-500">
               Acesso restrito — digite seu e-mail e senha para entrar.
             </p>
@@ -200,19 +200,19 @@ export default function Login() {
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              'radial-gradient(60% 60% at 15% 15%, rgba(79,70,229,0.35), transparent 60%), radial-gradient(50% 50% at 90% 85%, rgba(129,140,248,0.25), transparent 60%)'
+              'radial-gradient(60% 60% at 15% 15%, rgba(166,67,36,0.35), transparent 60%), radial-gradient(50% 50% at 90% 85%, rgba(201,131,106,0.25), transparent 60%)'
           }}
         />
 
         <div className="relative">
-          <div className="flex items-center gap-2 text-slate-300">
+          <div className="flex items-center gap-2 text-brand-cream/70">
             <ShieldCheck size={18} />
             <span className="text-xs font-semibold uppercase tracking-wide">Plataforma SEGUE</span>
           </div>
           <h2 className="mt-6 max-w-md text-3xl font-bold leading-tight text-white">
             SEGUE Vistorias — a solução completa para gestão de vistorias da sua imobiliária
           </h2>
-          <p className="mt-4 max-w-sm text-sm text-slate-400">
+          <p className="mt-4 max-w-sm text-sm text-brand-cream/60">
             Agilidade no agendamento, organização visual em Kanban por status e controle total da agenda —
             tudo em um só lugar.
           </p>

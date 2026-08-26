@@ -21,7 +21,7 @@ export default function DayAgendaPanel({
       <div className="mb-4 flex items-start justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vistorias do dia</p>
-          <h3 className="text-base font-bold capitalize text-slate-900">
+          <h3 className="text-base font-bold capitalize text-brand-900">
             {format(day, "d 'de' MMMM", { locale: ptBR })}
           </h3>
         </div>
@@ -47,7 +47,7 @@ export default function DayAgendaPanel({
       ) : (
         <ul className="space-y-3 overflow-y-auto">
           {dayVistorias.map((v) => (
-            <li key={v.id} className="rounded-xl border border-slate-100 p-3">
+            <li key={v.id} className="rounded-xl border border-brand-border/70 p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
                   <Clock size={13} />
@@ -59,7 +59,7 @@ export default function DayAgendaPanel({
                     <button
                       type="button"
                       onClick={() => onEdit(v)}
-                      className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-accent"
+                      className="rounded p-1 text-slate-400 hover:bg-brand-cream hover:text-brand-accent"
                       title="Editar vistoria"
                     >
                       <Pencil size={12} />
@@ -77,7 +77,7 @@ export default function DayAgendaPanel({
                   )}
                 </div>
               </div>
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-semibold text-brand-900">
                 {v.imoveis?.codigo_imovel} · {v.tipo}
               </p>
               <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">

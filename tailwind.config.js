@@ -14,16 +14,21 @@ export default {
           finalizada: '#4CAF50', // Verde - Finalizada
           cancelada: '#F44336'   // Vermelho - Deletada/Cancelada
         },
-        // Identidade SEGUE Imobiliária
+        // Identidade SEGUE Imobiliária — paleta oficial da marca
+        // (terracota + marrom), fundos de tela/modal permanecem
+        // brancos; brand.cream/brand.border cobrem cards, badges,
+        // hovers e divisores.
         brand: {
-          950: '#0B1120',
-          900: '#0F172A',
-          800: '#151F32',
-          700: '#1E293B',
-          600: '#334155',
-          accent: '#4F46E5',
-          accentDark: '#4338CA',
-          accentLight: '#818CF8'
+          950: '#180f0a',
+          900: '#261912',      // Sidebar / Menu Lateral / textos escuros
+          800: '#332218',      // tom intermediário (uso pontual)
+          700: '#593825',      // Secundária / Hover
+          600: '#7a5138',      // tom claro do marrom (uso pontual)
+          accent: '#a64324',      // Destaque / Ação principal (terracota)
+          accentDark: '#593825',  // hover de botões/itens em destaque (reaproveita o marrom "hover")
+          accentLight: '#c9836a', // tom claro do terracota (avatares, ícones sutis)
+          cream: '#f1ede5',       // fundo de cards/badges/hovers
+          border: '#bfb8ae'       // bordas e divisores
         }
       },
       boxShadow: {

@@ -74,7 +74,7 @@ const SignatureCanvas = forwardRef(function SignatureCanvas(_props, ref) {
     <div>
       <canvas
         ref={canvasRef}
-        className="h-40 w-full touch-none rounded-lg border border-slate-200 bg-white"
+        className="h-40 w-full touch-none rounded-lg border border-brand-border bg-white"
         onMouseDown={start}
         onMouseMove={move}
         onMouseUp={end}

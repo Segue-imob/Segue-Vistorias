@@ -19,7 +19,7 @@ export default function ItemCard({
   return (
     <div className="card space-y-3 p-4">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-bold text-slate-900">{item.item}</p>
+        <p className="text-sm font-bold text-brand-900">{item.item}</p>
         {!readOnly && onRemoveItem && (
           <button
             type="button"
@@ -35,7 +35,7 @@ export default function ItemCard({
       {readOnly ? (
         <span
           className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${
-            estadoMeta ? `${estadoMeta.bg} ${estadoMeta.text}` : 'bg-slate-100 text-slate-400'
+            estadoMeta ? `${estadoMeta.bg} ${estadoMeta.text}` : 'bg-brand-cream text-slate-400'
           }`}
         >
           {estadoMeta ? estadoMeta.label : 'Não avaliado'}
@@ -74,7 +74,7 @@ export default function ItemCard({
                 key={foto.id}
                 src={foto.url}
                 alt={`Foto de ${item.item}`}
-                className="h-16 w-16 rounded-lg border border-slate-200 object-cover"
+                className="h-16 w-16 rounded-lg border border-brand-border object-cover"
               />
             ))}
           </div>

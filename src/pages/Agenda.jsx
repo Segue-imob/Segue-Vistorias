@@ -62,7 +62,7 @@ export default function Agenda() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Agenda</h1>
+          <h1 className="text-xl font-bold text-brand-900">Agenda</h1>
           <p className="text-sm text-slate-500">Visualize e organize as vistorias por dia.</p>
         </div>
 

@@ -20,14 +20,14 @@ export default function Sidebar() {
   const visibleItems = NAV_ITEMS.filter((item) => PERMISSIONS[item.permission](role))
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-900 text-slate-200 md:flex">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-900 text-brand-cream/90 md:flex">
       <div className="flex items-center gap-2.5 px-6 py-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-accent">
           <Building2 size={18} className="text-white" strokeWidth={2.5} />
         </div>
         <div className="leading-tight">
           <p className="text-sm font-bold tracking-wide text-white">SEGUE</p>
-          <p className="text-[11px] font-medium text-slate-400">Vistorias</p>
+          <p className="text-[11px] font-medium text-brand-cream/60">Vistorias</p>
         </div>
       </div>
 
@@ -40,7 +40,7 @@ export default function Sidebar() {
               `flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-brand-accent text-white shadow-sm'
-                  : 'text-slate-400 hover:bg-brand-800 hover:text-white'
+                  : 'text-brand-cream/70 hover:bg-brand-700 hover:text-white'
               }`
             }
           >
@@ -50,19 +50,19 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-brand-800 px-3 py-4">
+      <div className="border-t border-white/10 px-3 py-4">
         <div className="flex items-center gap-3 rounded-lg px-3.5 py-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-accentLight/20 text-xs font-bold text-brand-accentLight">
             {getInitials(profile?.nome)}
           </div>
           <div className="min-w-0 flex-1 leading-tight">
             <p className="truncate text-sm font-medium text-white">{profile?.nome || 'Usuário'}</p>
-            <p className="truncate text-xs text-slate-500">{getRoleLabel(role)}</p>
+            <p className="truncate text-xs text-brand-cream/50">{getRoleLabel(role)}</p>
           </div>
           <button
             type="button"
             onClick={() => supabase.auth.signOut()}
-            className="rounded-md p-1.5 text-slate-500 transition hover:bg-brand-800 hover:text-white"
+            className="rounded-md p-1.5 text-brand-cream/60 transition hover:bg-brand-700 hover:text-white"
             title="Sair"
           >
             <LogOut size={16} />
