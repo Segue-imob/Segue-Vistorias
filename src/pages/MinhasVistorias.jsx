@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronRight, ClipboardCheck, Loader2, MapPin } from 'lucide-react'
+import { ChevronRight, ClipboardCheck, ClipboardList, Loader2, MapPin } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useVistorias } from '../hooks/useVistorias'
 import StatusBadge from '../components/StatusBadge'
@@ -19,10 +19,12 @@ function VistoriaCard({ vistoria, tab, onAceitar, aceitando }) {
   const mapsUrl = buildMapsUrl(vistoria.imoveis)
   const isNavigable = tab === 'andamento' || tab === 'concluidas'
 
+  const abrirChecklist = () => navigate(`/minhas-vistorias/${vistoria.id}`)
+
   return (
     <div
       className={`card flex flex-col gap-3 p-4 ${isNavigable ? 'cursor-pointer active:bg-slate-50' : ''}`}
-      onClick={isNavigable ? () => navigate(`/minhas-vistorias/${vistoria.id}`) : undefined}
+      onClick={isNavigable ? abrirChecklist : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -59,6 +61,11 @@ function VistoriaCard({ vistoria, tab, onAceitar, aceitando }) {
           >
             {aceitando ? <Loader2 size={13} className="animate-spin" /> : <ClipboardCheck size={13} />}
             Aceitar Vistoria
+          </button>
+        )}
+        {tab === 'andamento' && (
+          <button type="button" onClick={abrirChecklist} className="btn-primary !py-1.5 text-xs">
+            <ClipboardList size={13} /> Continuar Vistoria
           </button>
         )}
       </div>
