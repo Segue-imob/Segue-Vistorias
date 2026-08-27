@@ -25,6 +25,7 @@ export default function VistoriaExecucao() {
     addItemCustom,
     removeItem,
     setItemEstado,
+    setItemFuncionamento,
     updateItemObservacao,
     addFotoItem,
     removeFotoItem,
@@ -170,6 +171,7 @@ export default function VistoriaExecucao() {
                 item={item}
                 readOnly={isEncerrada}
                 onSetEstado={(estado) => setItemEstado(activeAmbiente.id, item.id, estado)}
+                onSetFuncionamento={(funcionamento) => setItemFuncionamento(activeAmbiente.id, item.id, funcionamento)}
                 onUpdateObservacao={(observacao) => updateItemObservacao(activeAmbiente.id, item.id, observacao)}
                 onUploadFoto={(file) => addFotoItem(activeAmbiente.id, item.id, file)}
                 onRemoveFoto={(fotoId) => removeFotoItem(activeAmbiente.id, item.id, fotoId)}

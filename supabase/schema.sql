@@ -478,3 +478,20 @@ drop policy if exists "Autenticados removem de vistoria-fotos" on storage.object
 alter table public.vistoria_ambientes add column if not exists nome text;
 alter table public.vistoria_itens add column if not exists nome text;
 alter table public.vistoria_itens add column if not exists status text;
+
+-- ============================================================
+-- Nova escala de condição do item (Ótima/Boa/Regular/Ruim, valores
+-- internos: otima/boa/regular/ruim) + campo Funcionamento (Sim/Não)
+-- para eletros/eletrônicos.
+--
+-- A constraint antiga de `estado` só aceitava
+-- ('bom','regular','avariado','ausente') — como a escala mudou de
+-- verdade (não é só troca de nome de coluna) e já tivemos atrito
+-- repetido com CHECK/NOT NULL travando o front, removemos a
+-- constraint em vez de trocá-la de novo: `estado`/`status` viram
+-- texto livre, validado só no app (ESTADOS_ITEM em
+-- src/lib/vistoriaExecucao.js).
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+alter table public.vistoria_itens drop constraint if exists vistoria_itens_estado_check;
+alter table public.vistoria_itens add column if not exists funcionamento text;

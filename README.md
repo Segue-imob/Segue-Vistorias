@@ -66,18 +66,32 @@ Disponível nos três lugares onde uma vistoria aparece como card/linha — **Ag
 O fluxo de campo do Vistoriador é uma navegação em **2 níveis**:
 
 - **Nível 1 — Ambientes**: cards com o nome do ambiente, barra de progresso e "X/Y itens avaliados", botão **Vistoriar Ambiente**. O seletor "+ Adicionar" ambiente (Sala, Cozinha, Quarto, Banheiro, Varanda ou "Outro" customizado) já carrega, na hora, os **12 itens padrão** como linhas reais no banco — é por isso que o card nasce mostrando "0/12" mesmo antes de entrar nele.
-- **Nível 2 — Itens do ambiente**: ao tocar em "Vistoriar Ambiente", a tela troca para a lista de itens daquele ambiente (Piso, Rodapé, Parede, Teto, Porta, Janela, Interruptores e Tomadas, Luminária, Armário, Bancada da Pia, Torneira, Tanque), cada um com seletor de estado (`Bom`/`Regular`/`Avariado`/`Ausente`), campo de observação e upload de foto **por item** (não mais por ambiente). O botão **+ Adicionar Outro Item** cria itens personalizados na hora. **← Voltar para Lista de Ambientes** retorna ao Nível 1.
+- **Nível 2 — Itens do ambiente**: ao tocar em "Vistoriar Ambiente", a tela troca para a lista de itens daquele ambiente (Piso, Rodapé, Parede, Teto, Porta, Janela, Interruptores e Tomadas, Luminária, Armário, Bancada da Pia, Torneira, Tanque), cada um com seletor de **Condição** (`Ótima`/`Boa`/`Regular`/`Ruim`), seletor de **Funcionamento** (`Sim`/`Não`, útil para eletros/eletrônicos), campo de observação e upload de foto **por item**, com limite de **30 fotos por item** (contador "X/30" sempre visível). O botão **+ Adicionar Outro Item** cria itens personalizados na hora. **← Voltar para Lista de Ambientes** retorna ao Nível 1.
+
+### Câmera nativa (WebRTC) para as fotos do checklist
+
+O botão "Foto" de cada item abre `CameraCaptureModal` — câmera em tela cheia via `navigator.mediaDevices.getUserMedia`, não o seletor de arquivo do sistema:
+
+- **Disparo consecutivo**: cada toque no botão de captura desenha o frame atual do `<video>` num `<canvas>` oculto, gera um `Blob` e empilha numa lista local — a câmera continua aberta. Só ao tocar em **Concluir** as fotos capturadas na sessão são enviadas de uma vez (`onUpload` chamado em sequência para cada uma).
+- **Zoom 1x/2x/3x**: tenta a constraint nativa da câmera (`track.applyConstraints({ advanced: [{ zoom }] })`) quando o hardware/navegador suporta; sempre aplica também um `scale()` via CSS no `<video>` como zoom digital — funciona mesmo em dispositivos sem zoom óptico controlável.
+- **Flash/lanterna**: usa a constraint `torch`; o botão só aparece quando `track.getCapabilities().torch` existir (a maioria dos notebooks não tem — é normal ficar oculto fora de celular).
+- **Contador e "Concluir"**: topo do modal mostra fotos capturadas na sessão e quantas ainda cabem até o limite de 30; "Concluir" fecha a câmera e dispara o upload.
+- **Fallback de galeria**: se `getUserMedia` falhar (permissão negada, navegador sem suporte, contexto não-seguro sem HTTPS), o modal mostra a mensagem de erro com um botão "Escolher da galeria", que cai no `<input type="file">` tradicional — a câmera custom nunca deixa o vistoriador travado sem conseguir anexar foto nenhuma.
+
+**Atenção**: `getUserMedia` exige contexto seguro — funciona em `https://` e em `localhost`, mas **não funciona em HTTP puro** (comum em preview de rede local tipo `http://192.168.x.x`). Isso não é uma limitação do código, é uma exigência de segurança do próprio navegador.
 
 ### Resiliência a nomes de coluna alternativos
 
 `useVistoriaExecucao.js` grava o nome do ambiente/item e o estado em **duas colunas cada** — `ambiente`+`nome` (em `vistoria_ambientes`), `item`+`nome` e `estado`+`status` (em `vistoria_itens`) — para funcionar mesmo que seu banco use um nome de coluna diferente do outro. Isso é redundância deliberada (as duas colunas do par sempre recebem o mesmo valor); `schema.sql` já cria as colunas extras. Se algum `insert`/`update` falhar mesmo assim (sem internet em campo, coluna realmente ausente, etc.), a mensagem exata do Supabase vai pro `console.error` e o ambiente/item aparece na tela com um selo **"não sincronizado"** — a interface não trava, mas esses itens só existem localmente até a próxima gravação bem-sucedida (não sobrevivem a um recarregamento de página).
 
-**Importante — o que eu não implementei de propósito**: itens novos (padrão ou personalizados) sempre nascem com estado `null` ("não avaliado"), nunca pré-preenchidos como "Bom". Preencher automaticamente um item como "em bom estado" antes do vistoriador sequer olhar pra ele forjaria dado num documento que pode virar base de laudo ou disputa de caução — isso é uma escolha de integridade dos dados, não uma lacuna técnica.
+**Importante — o que eu não implementei de propósito**: itens novos (padrão ou personalizados) sempre nascem com estado `null` ("não avaliado"), nunca pré-preenchidos como "Ótima"/"Boa". Preencher automaticamente um item como avaliado antes do vistoriador sequer olhar pra ele forjaria dado num documento que pode virar base de laudo ou disputa de caução — isso é uma escolha de integridade dos dados, não uma lacuna técnica.
+
+**Mudança de escala (2ª vez)**: a condição do item mudou de `Bom/Regular/Avariado/Ausente` para `Ótima/Boa/Regular/Ruim`. Vale notar que o conceito de **"Ausente"** (item que simplesmente não existe no imóvel) não tem equivalente direto na nova escala — se isso for relevante pro seu fluxo (ex.: um armário que deveria existir mas não existe), o campo Observações continua disponível para registrar isso em texto. Como a escala já mudou duas vezes, `schema.sql` agora **remove** a constraint `CHECK` de `estado` em vez de trocá-la de novo — a validação de valores válidos passa a viver só no front (`ESTADOS_ITEM`), evitando outro ciclo de erro de constraint a cada ajuste futuro de rótulo.
 
 Tabelas envolvidas — rode novamente `supabase/schema.sql` (é idempotente) para aplicar:
 
-- `vistoria_ambientes` — um ambiente vistoriado (`vistoria_id`, `ambiente`).
-- `vistoria_itens` — cada item de um ambiente (`ambiente_id`, `item`, `estado` — agora **opcional**, `null` até ser avaliado —, `observacao`). Não tem mais unicidade por nome: itens são linhas próprias, criadas de verdade ao adicionar o ambiente (os 12 padrão) ou via "+ Adicionar Outro Item".
+- `vistoria_ambientes` — um ambiente vistoriado (`vistoria_id`, `ambiente`, `nome`).
+- `vistoria_itens` — cada item de um ambiente (`ambiente_id`, `item`/`nome`, `estado`/`status` — opcional, `null` até ser avaliado, sem CHECK —, `funcionamento`, `observacao`). Não tem mais unicidade por nome: itens são linhas próprias, criadas de verdade ao adicionar o ambiente (os 12 padrão) ou via "+ Adicionar Outro Item".
 - `vistoria_fotos` — ganhou a coluna `item_id` (além de `ambiente_id`, que continua obrigatório): cada foto agora se vincula a um item específico.
 - `vistorias` ganhou `assinatura_url`, `finalizada_em` e `laudo_preenchido` (jsonb) — este último recebe, **a cada alteração no checklist**, um snapshot JSON da estrutura completa (ambientes → itens → fotos), útil para consulta/exportação sem precisar recompor os joins. Essa sincronização roda em segundo plano (efeito colateral "melhor esforço": se falhar, só avisa no console, nunca trava a tela).
 

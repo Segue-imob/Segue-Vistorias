@@ -364,6 +364,29 @@ export function useVistoriaExecucao(vistoriaId) {
     [patchItem]
   )
 
+  /** Funcionamento (Sim/Não) — independente da condição, útil para eletros/eletrônicos. */
+  const setItemFuncionamento = useCallback(
+    async (ambienteId, itemId, funcionamento) => {
+      if (isLocalId(itemId)) {
+        patchItem(ambienteId, itemId, { funcionamento })
+        return
+      }
+      const { data, error } = await supabase
+        .from('vistoria_itens')
+        .update({ funcionamento })
+        .eq('id', itemId)
+        .select('*')
+        .single()
+      if (error) {
+        console.error('[useVistoriaExecucao] Erro do Supabase ao salvar funcionamento:', error.message, error)
+        patchItem(ambienteId, itemId, { funcionamento, _naoSincronizado: true })
+        return
+      }
+      patchItem(ambienteId, itemId, { ...data, _naoSincronizado: false })
+    },
+    [patchItem]
+  )
+
   // Fotos exigem um arquivo de verdade enviado ao Storage — não há
   // como "fingir" localmente um upload que nunca aconteceu, então
   // aqui o erro continua sendo lançado (o FotoUploader já mostra a
@@ -471,6 +494,7 @@ export function useVistoriaExecucao(vistoriaId) {
     addItemCustom,
     removeItem,
     setItemEstado,
+    setItemFuncionamento,
     updateItemObservacao,
     addFotoItem,
     removeFotoItem,

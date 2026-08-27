@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
 import ItemEstadoSelector from './ItemEstadoSelector'
+import FuncionamentoSelector from './FuncionamentoSelector'
 import FotoUploader from './FotoUploader'
-import { getEstadoItemMeta } from '../../lib/vistoriaExecucao'
+import { FUNCIONAMENTO_OPCOES, getEstadoItemMeta } from '../../lib/vistoriaExecucao'
 
 export default function ItemCard({
   item,
   readOnly = false,
   onSetEstado,
+  onSetFuncionamento,
   onUpdateObservacao,
   onUploadFoto,
   onRemoveFoto,
@@ -16,6 +18,7 @@ export default function ItemCard({
   const [observacaoLocal, setObservacaoLocal] = useState(item.observacao || '')
   const nomeItem = item.item || item.nome || 'Item'
   const estadoMeta = getEstadoItemMeta(item.estado)
+  const funcionamentoLabel = FUNCIONAMENTO_OPCOES.find((f) => f.value === item.funcionamento)?.label
 
   return (
     <div className="card space-y-3 p-4">
@@ -43,17 +46,33 @@ export default function ItemCard({
         )}
       </div>
 
-      {readOnly ? (
-        <span
-          className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${
-            estadoMeta ? `${estadoMeta.bg} ${estadoMeta.text}` : 'bg-brand-cream text-slate-400'
-          }`}
-        >
-          {estadoMeta ? estadoMeta.label : 'Não avaliado'}
-        </span>
-      ) : (
-        <ItemEstadoSelector value={item.estado} onChange={onSetEstado} />
-      )}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Condição</p>
+          {readOnly ? (
+            <span
+              className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${
+                estadoMeta ? `${estadoMeta.bg} ${estadoMeta.text}` : 'bg-brand-cream text-slate-400'
+              }`}
+            >
+              {estadoMeta ? estadoMeta.label : 'Não avaliado'}
+            </span>
+          ) : (
+            <ItemEstadoSelector value={item.estado} onChange={onSetEstado} />
+          )}
+        </div>
+
+        <div>
+          {readOnly ? (
+            <>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Funcionamento</p>
+              <p className="text-sm text-slate-600">{funcionamentoLabel || 'Não informado'}</p>
+            </>
+          ) : (
+            <FuncionamentoSelector value={item.funcionamento} onChange={onSetFuncionamento} />
+          )}
+        </div>
+      </div>
 
       <div>
         <label className="label-field">Observações</label>

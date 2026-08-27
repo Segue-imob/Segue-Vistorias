@@ -28,16 +28,27 @@ export const ITENS_PADRAO = [
 // digital de encerramento.
 export const FOTOS_BUCKET = 'vistorias-fotos'
 
-// Estados possíveis para cada item vistoriado. Cores propositalmente
-// diferentes da paleta de STATUS da vistoria (src/lib/constants.js)
-// para não confundir "estado do item" com "status da vistoria".
+// Limite de fotos por item (exibido como contador "X/30" no upload).
+export const MAX_FOTOS_POR_ITEM = 30
+
+// Condição de cada item vistoriado, na ordem exata pedida:
+// Ótima -> Boa -> Regular -> Ruim. Cores propositalmente diferentes
+// da paleta de STATUS da vistoria (src/lib/constants.js) para não
+// confundir "condição do item" com "status da vistoria".
 export const ESTADOS_ITEM = {
-  bom: {
-    value: 'bom',
-    label: 'Bom',
-    color: '#22C55E',
-    bg: 'bg-[#22C55E]/10',
+  otima: {
+    value: 'otima',
+    label: 'Ótima',
+    color: '#16A34A',
+    bg: 'bg-[#16A34A]/10',
     text: 'text-[#15803D]'
+  },
+  boa: {
+    value: 'boa',
+    label: 'Boa',
+    color: '#65A30D',
+    bg: 'bg-[#65A30D]/10',
+    text: 'text-[#4D7C0F]'
   },
   regular: {
     value: 'regular',
@@ -46,23 +57,22 @@ export const ESTADOS_ITEM = {
     bg: 'bg-[#F59E0B]/10',
     text: 'text-[#B45309]'
   },
-  avariado: {
-    value: 'avariado',
-    label: 'Avariado',
-    color: '#EF4444',
-    bg: 'bg-[#EF4444]/10',
+  ruim: {
+    value: 'ruim',
+    label: 'Ruim',
+    color: '#DC2626',
+    bg: 'bg-[#DC2626]/10',
     text: 'text-[#B91C1C]'
-  },
-  ausente: {
-    value: 'ausente',
-    label: 'Ausente',
-    color: '#64748B',
-    bg: 'bg-[#64748B]/10',
-    text: 'text-[#334155]'
   }
 }
 
-export const ESTADOS_ITEM_ORDER = ['bom', 'regular', 'avariado', 'ausente']
+export const ESTADOS_ITEM_ORDER = ['otima', 'boa', 'regular', 'ruim']
+
+// Funcionamento (para eletros/eletrônicos) — independente da condição.
+export const FUNCIONAMENTO_OPCOES = [
+  { value: 'sim', label: 'Sim' },
+  { value: 'nao', label: 'Não' }
+]
 
 export function getEstadoItemMeta(estado) {
   return ESTADOS_ITEM[estado] || null

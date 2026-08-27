@@ -63,6 +63,11 @@ export default function FinalizarVistoriaModal({ open, onClose, ambientes, onCon
                       <div key={it.id} className="flex items-start justify-between gap-2 text-xs">
                         <div className="min-w-0">
                           <span className="font-medium text-slate-600">{it.item || it.nome}</span>
+                          {it.funcionamento && (
+                            <span className="ml-1.5 text-[10px] text-slate-400">
+                              · Funciona: {it.funcionamento === 'sim' ? 'Sim' : 'Não'}
+                            </span>
+                          )}
                           {it.observacao && (
                             <p className="truncate text-[11px] text-slate-400">{it.observacao}</p>
                           )}
