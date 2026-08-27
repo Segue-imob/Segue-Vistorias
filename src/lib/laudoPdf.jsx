@@ -11,8 +11,19 @@
 //      queimada nos próprios pixels — ver src/lib/imageProcessing.js)
 //   5. Encerramento: observações finais, termo de responsabilidade e
 //      assinatura digital com data de conclusão
+//
+// SOBRE AS FOTOS EM BRANCO: nossas fotos são comprimidas em WebP
+// (imageProcessing.js) quando o navegador suporta — mas o
+// @react-pdf/renderer só decodifica PNG/JPEG nativamente, então
+// qualquer imagem .webp vira uma caixa em branco no PDF, mesmo com a
+// URL correta e sem nenhum problema de CORS. A correção é pré-converter
+// cada foto pra um data: URI em PNG usando um <canvas> (o navegador
+// decodifica WebP perfeitamente pra exibição; nós só reaproveitamos
+// esse decode e reembalamos como PNG) ANTES de montar o documento —
+// isso também elimina qualquer fetch assíncrono durante a própria
+// renderização do PDF, evitando timing/CORS de outra natureza.
 // ------------------------------------------------------------------
-import { Document, Page, Text, View, Image, StyleSheet, pdf } from '@react-pdf/renderer'
+import { Document, Page, Text, View, Image, Link, StyleSheet, pdf } from '@react-pdf/renderer'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ESTADOS_ITEM_ORDER, getEstadoItemMeta } from './vistoriaExecucao'
@@ -126,6 +137,18 @@ const styles = StyleSheet.create({
   photoBox: { width: 158, marginRight: 8, marginBottom: 8 },
   photoLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 2 },
   photo: { width: 158, height: 118, objectFit: 'cover', borderRadius: 2, borderWidth: 1, borderColor: CORES.border },
+  photoCaption: { fontSize: 6, color: CORES.brand700, marginTop: 2 },
+  photoIndisponivel: {
+    width: 158,
+    height: 118,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: CORES.border,
+    backgroundColor: CORES.cream,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  photoIndisponivelTexto: { fontSize: 6, color: CORES.brand700, textAlign: 'center', paddingHorizontal: 6 },
 
   // ---- Encerramento ----
   observacoesFinaisBox: {
@@ -168,6 +191,106 @@ function labelFuncionamento(valor) {
   if (valor === 'sim') return 'Sim'
   if (valor === 'nao') return 'Não'
   return 'N/A'
+}
+
+/**
+ * Busca uma imagem pela URL pública e a reembala como PNG puro em
+ * data: URI, via <canvas> — contorna a falta de suporte a WebP do
+ * @react-pdf/renderer (ver nota no topo do arquivo). Nunca lança:
+ * se a conversão falhar por qualquer motivo (rede, CORS, formato
+ * exótico), devolve null e quem chamar decide o que fazer — nunca
+ * trava a geração do laudo inteiro por causa de uma foto só.
+ */
+async function converterImagemParaPngDataUrl(url) {
+  if (!url) return null
+  try {
+    const resposta = await fetch(url, { mode: 'cors' })
+    if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`)
+    const blob = await resposta.blob()
+
+    let bitmap
+    if ('createImageBitmap' in window) {
+      bitmap = await createImageBitmap(blob)
+    } else {
+      bitmap = await new Promise((resolve, reject) => {
+        const img = new window.Image()
+        const objectUrl = URL.createObjectURL(blob)
+        img.onload = () => {
+          URL.revokeObjectURL(objectUrl)
+          resolve(img)
+        }
+        img.onerror = (err) => {
+          URL.revokeObjectURL(objectUrl)
+          reject(err)
+        }
+        img.src = objectUrl
+      })
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = bitmap.width
+    canvas.height = bitmap.height
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(bitmap, 0, 0)
+    if (typeof bitmap.close === 'function') bitmap.close()
+
+    return canvas.toDataURL('image/png')
+  } catch (err) {
+    console.warn('[laudoPdf] Falha ao converter imagem para o PDF, usando URL original como último recurso:', url, err.message)
+    return null
+  }
+}
+
+/**
+ * Combina as fotos vindas de `vistoria_fotos` (join já feito no hook)
+ * com quaisquer URLs presentes só em `item.fotos_urls` — cobre o caso
+ * de uma foto ter sido salva como rede de segurança em fotos_urls
+ * (ver useVistoriaExecucao.addFotoItem) sem uma linha correspondente
+ * em vistoria_fotos, o que faria essa foto nunca aparecer no laudo se
+ * só olhássemos pra vistoria_fotos.
+ */
+function coletarFotosDoItem(item) {
+  const doJoin = Array.isArray(item.vistoria_fotos) ? item.vistoria_fotos : []
+  const urlsJaPresentes = new Set(doJoin.map((f) => f.url))
+  const extrasDeFotosUrls = (Array.isArray(item.fotos_urls) ? item.fotos_urls : [])
+    .filter((url) => url && !urlsJaPresentes.has(url))
+    .map((url, index) => ({ id: `fotos_urls-${item.id}-${index}`, url, created_at: null }))
+  return [...doJoin, ...extrasDeFotosUrls]
+}
+
+/**
+ * Prepara uma cópia de `vistoria`/`ambientes` pronta pro PDF: cada
+ * foto ganha `_pdfSrc` (PNG embutido, o que de fato é desenhado na
+ * página) mantendo `url` intacta (usada no link clicável pra foto
+ * original). Roda as conversões em paralelo por ambiente/item.
+ */
+async function prepararDadosParaPdf(vistoria, ambientes) {
+  const assinaturaPdfSrc = vistoria.assinatura_url
+    ? (await converterImagemParaPngDataUrl(vistoria.assinatura_url)) || vistoria.assinatura_url
+    : null
+
+  const ambientesPreparados = await Promise.all(
+    ambientes.map(async (ambiente) => {
+      const itensPreparados = await Promise.all(
+        (ambiente.vistoria_itens || []).map(async (item) => {
+          const fotosCombinadas = coletarFotosDoItem(item)
+          const fotosPreparadas = await Promise.all(
+            fotosCombinadas.map(async (foto) => ({
+              ...foto,
+              _pdfSrc: (await converterImagemParaPngDataUrl(foto.url)) || null
+            }))
+          )
+          return { ...item, _fotosParaPdf: fotosPreparadas }
+        })
+      )
+      return { ...ambiente, vistoria_itens: itensPreparados }
+    })
+  )
+
+  return {
+    vistoria: { ...vistoria, _assinaturaPdfSrc: assinaturaPdfSrc },
+    ambientes: ambientesPreparados
+  }
 }
 
 function Cabecalho({ vistoria }) {
@@ -268,9 +391,17 @@ function ResumoExecutivo({ vistoria, ambientes }) {
   )
 }
 
+function legendaFoto(foto, item) {
+  const nomeItem = item.item || item.nome || 'Item'
+  if (foto.created_at) {
+    return `Foto tirada em ${formatarData(foto.created_at)} - Item: ${nomeItem}`
+  }
+  return `Item: ${nomeItem}`
+}
+
 function AmbienteSecao({ ambiente }) {
   const itens = ambiente.vistoria_itens || []
-  const fotos = itens.flatMap((it) => (it.vistoria_fotos || []).map((foto) => ({ foto, item: it })))
+  const fotos = itens.flatMap((it) => (it._fotosParaPdf || []).map((foto) => ({ foto, item: it })))
 
   return (
     <View>
@@ -300,9 +431,20 @@ function AmbienteSecao({ ambiente }) {
       {fotos.length > 0 && (
         <View style={styles.photosGrid}>
           {fotos.map(({ foto, item }) => (
-            <View key={foto.id} style={styles.photoBox}>
+            <View key={foto.id} style={styles.photoBox} wrap={false}>
               <Text style={styles.photoLabel}>{item.item || item.nome}</Text>
-              <Image src={foto.url} style={styles.photo} />
+              {foto._pdfSrc ? (
+                <Link src={foto.url}>
+                  <Image src={foto._pdfSrc} style={styles.photo} />
+                </Link>
+              ) : (
+                <View style={styles.photoIndisponivel}>
+                  <Text style={styles.photoIndisponivelTexto}>Foto indisponível — abrir original abaixo</Text>
+                </View>
+              )}
+              <Link src={foto.url}>
+                <Text style={styles.photoCaption}>{legendaFoto(foto, item)}</Text>
+              </Link>
             </View>
           ))}
         </View>
@@ -335,7 +477,7 @@ function Encerramento({ vistoria }) {
 
       <View style={styles.signatureBox} wrap={false}>
         <Text style={styles.signatureLabel}>Assinatura do vistoriador</Text>
-        {vistoria.assinatura_url && <Image src={vistoria.assinatura_url} style={styles.signatureImg} />}
+        {vistoria._assinaturaPdfSrc && <Image src={vistoria._assinaturaPdfSrc} style={styles.signatureImg} />}
         <Text>Vistoria concluída em: {formatarData(vistoria.finalizada_em || vistoria.concluida_em)}</Text>
       </View>
     </View>
@@ -369,8 +511,15 @@ function LaudoDocument({ vistoria, ambientes }) {
   )
 }
 
-/** Gera o Blob do PDF pronto pra download/upload. */
+/**
+ * Gera o Blob do PDF pronto pra download/upload. Antes de montar o
+ * documento, converte todas as fotos (e a assinatura) pra PNG
+ * embutido — ver prepararDadosParaPdf e a nota no topo do arquivo
+ * sobre por que isso é necessário (WebP não é suportado pelo
+ * renderizador de PDF).
+ */
 export async function gerarLaudoPdfBlob(vistoria, ambientes) {
-  const instancia = pdf(<LaudoDocument vistoria={vistoria} ambientes={ambientes} />)
+  const dados = await prepararDadosParaPdf(vistoria, ambientes)
+  const instancia = pdf(<LaudoDocument vistoria={dados.vistoria} ambientes={dados.ambientes} />)
   return await instancia.toBlob()
 }

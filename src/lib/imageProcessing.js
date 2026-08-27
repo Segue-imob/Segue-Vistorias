@@ -23,7 +23,7 @@ function formatarTimestamp(data = new Date()) {
  * fotos vindas da galeria (sem isso, algumas fotos tiradas na
  * vertical apareceriam deitadas depois de processadas).
  */
-async function blobParaImagemDesenhavel(blob) {
+export async function blobParaImagemDesenhavel(blob) {
   if ('createImageBitmap' in window) {
     try {
       return await createImageBitmap(blob, { imageOrientation: 'from-image' })
