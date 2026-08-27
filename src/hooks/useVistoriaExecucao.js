@@ -402,6 +402,7 @@ export function useVistoriaExecucao(vistoriaId) {
           ambiente_id: ambienteId,
           item_id: itemId,
           url: urlLocal,
+          created_at: new Date().toISOString(),
           _naoSincronizado: true
         }
         setAmbientes((prev) =>
@@ -466,6 +467,7 @@ export function useVistoriaExecucao(vistoriaId) {
           item_id: itemId,
           foto_url: url,
           url,
+          created_at: new Date().toISOString(),
           _naoSincronizado: true
         }
       } else {
@@ -511,26 +513,62 @@ export function useVistoriaExecucao(vistoriaId) {
     [vistoriaId, ambientes]
   )
 
-  const removeFotoItem = useCallback(async (ambienteId, itemId, fotoId) => {
-    const { error } = await supabase.from('vistoria_fotos').delete().eq('id', fotoId)
-    if (error) {
-      console.error('[useVistoriaExecucao] Erro do Supabase ao remover foto:', error.message, error)
-    }
-    setAmbientes((prev) =>
-      prev.map((a) =>
-        a.id === ambienteId
-          ? {
-              ...a,
-              vistoria_itens: (a.vistoria_itens || []).map((it) =>
-                it.id === itemId
-                  ? { ...it, vistoria_fotos: (it.vistoria_fotos || []).filter((f) => f.id !== fotoId) }
-                  : it
-              )
-            }
-          : a
+  const removeFotoItem = useCallback(
+    async (ambienteId, itemId, fotoId) => {
+      // Acha a foto/URL atuais no estado local — usados pra manter
+      // fotos_urls sincronizado e pra decidir se vale a pena chamar
+      // o Supabase (item/foto locais nunca tiveram nada persistido).
+      const ambienteAtual = ambientes.find((a) => a.id === ambienteId)
+      const itemAtual = ambienteAtual?.vistoria_itens?.find((it) => it.id === itemId)
+      const fotoAtual = itemAtual?.vistoria_fotos?.find((f) => f.id === fotoId)
+
+      if (!isLocalId(itemId)) {
+        if (!isLocalId(fotoId)) {
+          const { error } = await supabase.from('vistoria_fotos').delete().eq('id', fotoId)
+          if (error) {
+            console.error('[useVistoriaExecucao] Erro do Supabase ao remover foto:', error.message, error)
+          }
+        }
+
+        if (fotoAtual?.url) {
+          const urlsAtuais = Array.isArray(itemAtual?.fotos_urls) ? itemAtual.fotos_urls : []
+          const novasUrls = urlsAtuais.filter((u) => u !== fotoAtual.url)
+          const { error: arrErr } = await supabase
+            .from('vistoria_itens')
+            .update({ fotos_urls: novasUrls })
+            .eq('id', itemId)
+          if (arrErr) {
+            console.warn(
+              '[useVistoriaExecucao] Não foi possível atualizar fotos_urls ao remover foto:',
+              arrErr.message
+            )
+          }
+        }
+      }
+
+      setAmbientes((prev) =>
+        prev.map((a) =>
+          a.id === ambienteId
+            ? {
+                ...a,
+                vistoria_itens: (a.vistoria_itens || []).map((it) =>
+                  it.id === itemId
+                    ? {
+                        ...it,
+                        vistoria_fotos: (it.vistoria_fotos || []).filter((f) => f.id !== fotoId),
+                        fotos_urls: Array.isArray(it.fotos_urls)
+                          ? it.fotos_urls.filter((u) => u !== fotoAtual?.url)
+                          : it.fotos_urls
+                      }
+                    : it
+                )
+              }
+            : a
+        )
       )
-    )
-  }, [])
+    },
+    [ambientes]
+  )
 
   const aceitarVistoria = useCallback(async () => {
     const { error } = await supabase.from('vistorias').update({ status: 'aceita' }).eq('id', vistoriaId)

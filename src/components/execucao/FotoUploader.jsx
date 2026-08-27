@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { Camera, Loader2, X } from 'lucide-react'
 import CameraCaptureModal from './CameraCaptureModal'
+import PhotoLightbox from './PhotoLightbox'
+import ConfirmDialog from '../ConfirmDialog'
 import { MAX_FOTOS_POR_ITEM } from '../../lib/vistoriaExecucao'
 import { processarArquivoParaUpload } from '../../lib/imageProcessing'
 
@@ -10,6 +12,8 @@ export default function FotoUploader({ fotos, onUpload, onRemove }) {
   const [uploading, setUploading] = useState(false)
   const [progresso, setProgresso] = useState(null) // { atual, total } durante upload em lote
   const [errorMsg, setErrorMsg] = useState('')
+  const [fotoAmpliada, setFotoAmpliada] = useState(null) // foto aberta no lightbox
+  const [fotoParaExcluir, setFotoParaExcluir] = useState(null) // foto aguardando confirmação
 
   const totalFotos = fotos.length
   const atingiuLimite = totalFotos >= MAX_FOTOS_POR_ITEM
@@ -53,6 +57,16 @@ export default function FotoUploader({ fotos, onUpload, onRemove }) {
     await enviarArquivos(files)
   }
 
+  const pedirConfirmacaoRemocao = (foto) => {
+    setFotoAmpliada(null) // fecha o lightbox, se estiver aberto, antes de confirmar
+    setFotoParaExcluir(foto)
+  }
+
+  const confirmarRemocao = async () => {
+    if (!fotoParaExcluir) return
+    await onRemove(fotoParaExcluir.id)
+  }
+
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between">
@@ -72,10 +86,17 @@ export default function FotoUploader({ fotos, onUpload, onRemove }) {
             key={foto.id}
             className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-brand-border"
           >
-            <img src={foto.url} alt="Foto do item" className="h-full w-full object-cover" />
             <button
               type="button"
-              onClick={() => onRemove(foto.id)}
+              onClick={() => setFotoAmpliada(foto)}
+              className="block h-full w-full"
+              title="Ver foto ampliada"
+            >
+              <img src={foto.url} alt="Foto do item" className="h-full w-full object-cover" />
+            </button>
+            <button
+              type="button"
+              onClick={() => pedirConfirmacaoRemocao(foto)}
               className="absolute right-0.5 top-0.5 rounded-full bg-brand-900/70 p-0.5 text-white transition hover:bg-red-600"
               title="Remover foto"
             >
@@ -115,6 +136,23 @@ export default function FotoUploader({ fotos, onUpload, onRemove }) {
 
       {/* Fallback de galeria — só acionado quando a câmera WebRTC falha */}
       <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFilesGaleria} />
+
+      <PhotoLightbox
+        open={Boolean(fotoAmpliada)}
+        foto={fotoAmpliada}
+        onClose={() => setFotoAmpliada(null)}
+        onDelete={() => pedirConfirmacaoRemocao(fotoAmpliada)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(fotoParaExcluir)}
+        onClose={() => setFotoParaExcluir(null)}
+        title="Remover foto"
+        description="Deseja excluir esta foto?"
+        confirmLabel="Excluir foto"
+        danger
+        onConfirm={confirmarRemocao}
+      />
     </div>
   )
 }

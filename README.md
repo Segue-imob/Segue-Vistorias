@@ -81,6 +81,15 @@ O botão "Foto" de cada item abre `CameraCaptureModal` — câmera em tela cheia
 
 **Atenção**: `getUserMedia` exige contexto seguro — funciona em `https://` e em `localhost`, mas **não funciona em HTTP puro** (comum em preview de rede local tipo `http://192.168.x.x`). Isso não é uma limitação do código, é uma exigência de segurança do próprio navegador.
 
+### Visualização em tela cheia e remoção de fotos
+
+Tocar em qualquer miniatura do checklist abre `PhotoLightbox` (novo componente) — foto ampliada em tela cheia (`object-contain`, sem cortar), botão **✕ Fechar** no topo, clique fora da imagem também fecha (o clique na própria foto não propaga, só a área ao redor), e rodapé com a data/hora de envio (`foto.created_at`, formatada em pt-BR).
+
+Remover uma foto — pelo **✕** discreto no canto da miniatura ou pelo botão "Remover foto" dentro do lightbox (que fecha o lightbox e abre a confirmação por cima) — sempre passa por `ConfirmDialog` com "Deseja excluir esta foto?" antes de executar de verdade. Ao confirmar, `removeFotoItem` (no hook):
+- Apaga a linha em `vistoria_fotos` (pulando essa chamada se a foto nunca chegou a ser registrada lá — ver `_naoSincronizado`);
+- Remove a URL do array `vistoria_itens.fotos_urls`, mantendo os dois lugares em sincronia;
+- Atualiza o estado local na hora — o contador "X/30" reflete a contagem nova automaticamente, já que é derivado direto do tamanho do array de fotos.
+
 ### Tratamento das fotos antes do upload (marca d'água, redimensionamento e compressão)
 
 Todo upload — vindo da câmera custom ou do fallback de galeria — passa por `processarArquivoParaUpload()` (`src/lib/imageProcessing.js`) antes de subir pro Storage:
