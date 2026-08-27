@@ -100,13 +100,15 @@ Ao clicar em "Finalizar e Salvar Vistoria" (modal de encerramento, que agora tam
 
 Depois de finalizar, a tela **não navega mais embora automaticamente** — fica na própria vistoria, agora em modo somente leitura, porque é aqui que mora o botão do laudo.
 
-**Botão "Imprimir / Baixar Laudo PDF"** (aparece só quando a vistoria está encerrada): gera o laudo 100% no navegador via `@react-pdf/renderer` (`src/lib/laudoPdf.jsx`) — sem depender de servidor. O documento inclui:
-- Cabeçalho com a marca "SEGUE Vistorias" e os dados do imóvel (código, endereço, bairro/cidade, tipo, data, inquilino/proprietário);
-- Uma tabela por ambiente, com todos os itens e suas colunas de Condição, Funcionamento e Observações;
-- Grade de fotos de cada ambiente — como as fotos já saem do upload com a marca d'água de data/hora **queimada nos próprios pixels** (ver seção de tratamento de fotos acima), exibi-las aqui já cumpre esse requisito sem precisar redesenhar nada;
-- Bloco final com a imagem da assinatura digital e a data de encerramento.
+**Estrutura do laudo em PDF** (`src/lib/laudoPdf.jsx`, gerado 100% no navegador via `@react-pdf/renderer`, sem depender de servidor — layout baseado num modelo de laudo real de mercado, adaptado à paleta e aos dados da SEGUE Vistorias):
 
-Ao clicar, o PDF é baixado direto no dispositivo do vistoriador (via link temporário) **e** enviado ao Storage, gravando a URL em `vistorias.laudo_pdf_url` — essa segunda parte é melhor esforço: se falhar, o download já feito não é desfeito, só fica sem o link permanente salvo no banco.
+1. **Cabeçalho** — marca "SEGUE Vistorias" (marca-d'água quadrada + wordmark, cores `#a64324`/`#261912`) e um quadro com Endereço completo, Tipo de vistoria, Data/hora de início e de finalização, Vistoriador responsável e Solicitante (nome de quem agendou — por isso `useVistoriaExecucao` agora também busca `vistoriador:vistoriador_id` e `solicitante:criado_por` junto com a vistoria).
+2. **Resumo executivo** — cards com total de ambientes, "X/Y itens avaliados", e a contagem de itens em cada condição (Ótima/Boa/Regular/Ruim), coloridos com a mesma paleta usada no checklist.
+3. **Detalhamento por ambiente** — uma tabela por ambiente (Item / Condição / Funcionamento — agora com rótulo **N/A** para itens sem funcionamento informado, em vez de um travessão / Observações).
+4. **Galeria de fotos** — logo após a tabela de cada ambiente (mesmo padrão do laudo de referência), em grade de 3 colunas, cada foto legendada com o nome do item. A marca d'água de data/hora já está queimada nos pixels desde o upload (ver seção de tratamento de fotos), então nenhum redesenho é necessário aqui.
+5. **Encerramento** — observações finais (se preenchidas), um termo de responsabilidade original (não copiado do modelo de referência — apenas inspirado na estrutura), e o bloco de assinatura com a imagem capturada + data de conclusão.
+
+Ao clicar em "Imprimir / Baixar Laudo PDF" (visível só quando a vistoria está encerrada), o PDF é baixado direto no dispositivo do vistoriador (via link temporário) **e** enviado ao Storage, gravando a URL em `vistorias.laudo_pdf_url` — essa segunda parte é melhor esforço: se falhar, o download já feito não é desfeito, só fica sem o link permanente salvo no banco.
 
 **Por que `@react-pdf/renderer` em vez de `html2pdf.js`/`window.print()`**: das três opções que você deu, essa foi a única que gera um `Blob` de verdade no navegador — necessário pra poder subir o arquivo pro Storage e preencher `laudo_pdf_url`. `window.print()` delega pro diálogo de impressão do sistema operacional e nunca dá acesso a esse Blob (o "Salvar como PDF" acontece do lado de fora do JavaScript), então não daria pra popular essa coluna automaticamente.
 

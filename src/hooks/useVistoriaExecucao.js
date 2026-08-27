@@ -76,7 +76,9 @@ export function useVistoriaExecucao(vistoriaId) {
       .select(
         `
         *,
-        imoveis:imovel_id ( id, codigo_imovel, endereco, bairro, cidade, inquilino_nome, proprietario_nome )
+        imoveis:imovel_id ( id, codigo_imovel, endereco, bairro, cidade, inquilino_nome, proprietario_nome ),
+        vistoriador:vistoriador_id ( id, nome, email ),
+        solicitante:criado_por ( id, nome, email )
       `
       )
       .eq('id', vid)
