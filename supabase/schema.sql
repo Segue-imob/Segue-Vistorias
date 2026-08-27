@@ -495,3 +495,12 @@ alter table public.vistoria_itens add column if not exists status text;
 -- ============================================================
 alter table public.vistoria_itens drop constraint if exists vistoria_itens_estado_check;
 alter table public.vistoria_itens add column if not exists funcionamento text;
+
+-- ============================================================
+-- Espelho de URLs em vistoria_itens: além da linha em
+-- vistoria_fotos (vinculada por item_id), cada upload também
+-- acrescenta a URL num array na própria linha do item — útil pra
+-- quem quer ler todas as fotos de um item sem fazer join.
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+alter table public.vistoria_itens add column if not exists fotos_urls jsonb default '[]'::jsonb;

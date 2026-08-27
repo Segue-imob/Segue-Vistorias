@@ -72,6 +72,7 @@ O fluxo de campo do Vistoriador é uma navegação em **2 níveis**:
 
 O botão "Foto" de cada item abre `CameraCaptureModal` — câmera em tela cheia via `navigator.mediaDevices.getUserMedia`, não o seletor de arquivo do sistema:
 
+
 - **Disparo consecutivo**: cada toque no botão de captura desenha o frame atual do `<video>` num `<canvas>` oculto, gera um `Blob` e empilha numa lista local — a câmera continua aberta. Só ao tocar em **Concluir** as fotos capturadas na sessão são enviadas de uma vez (`onUpload` chamado em sequência para cada uma).
 - **Zoom 1x/2x/3x**: tenta a constraint nativa da câmera (`track.applyConstraints({ advanced: [{ zoom }] })`) quando o hardware/navegador suporta; sempre aplica também um `scale()` via CSS no `<video>` como zoom digital — funciona mesmo em dispositivos sem zoom óptico controlável.
 - **Flash/lanterna**: usa a constraint `torch`; o botão só aparece quando `track.getCapabilities().torch` existir (a maioria dos notebooks não tem — é normal ficar oculto fora de celular).
@@ -79,6 +80,20 @@ O botão "Foto" de cada item abre `CameraCaptureModal` — câmera em tela cheia
 - **Fallback de galeria**: se `getUserMedia` falhar (permissão negada, navegador sem suporte, contexto não-seguro sem HTTPS), o modal mostra a mensagem de erro com um botão "Escolher da galeria", que cai no `<input type="file">` tradicional — a câmera custom nunca deixa o vistoriador travado sem conseguir anexar foto nenhuma.
 
 **Atenção**: `getUserMedia` exige contexto seguro — funciona em `https://` e em `localhost`, mas **não funciona em HTTP puro** (comum em preview de rede local tipo `http://192.168.x.x`). Isso não é uma limitação do código, é uma exigência de segurança do próprio navegador.
+
+### Tratamento das fotos antes do upload (marca d'água, redimensionamento e compressão)
+
+Todo upload — vindo da câmera custom ou do fallback de galeria — passa por `processarArquivoParaUpload()` (`src/lib/imageProcessing.js`) antes de subir pro Storage:
+
+1. **Marca d'água de data/hora**: desenha a foto num `<canvas>` e escreve a data/hora **atual** (formato `27/08/2026 16:18`) no canto superior esquerdo — fonte pequena e branca, com uma caixa de fundo escuro semi-transparente e sombra sutil por trás, legível em qualquer foto sem cobrir demais os detalhes do imóvel. Como o processamento roda logo após a captura, "data/hora atual" na prática já corresponde ao momento da captura.
+2. **Redimensionamento**: se a largura original passar de 1280px, encolhe proporcionalmente até 1280px (nunca amplia uma foto menor).
+3. **Compressão**: converte pra WebP a 70% de qualidade (`canvas.toBlob`); se o navegador não suportar WebP, cai automaticamente para JPEG a 70%.
+
+Se qualquer etapa falhar (navegador sem `createImageBitmap`, canvas bloqueado, etc.), `processarArquivoParaUpload` nunca lança — devolve a foto **original sem tratamento** em vez de travar o upload, e registra o erro exato no console.
+
+**Vínculo no banco**: cada foto processada é enviada ao bucket, e a URL pública resultante é gravada em **dois lugares** — a linha em `vistoria_fotos` (vinculada por `item_id`, como já era) e também acrescentada ao array `vistoria_itens.fotos_urls` (coluna nova). A segunda gravação é "melhor esforço": se a coluna `fotos_urls` ainda não existir no seu banco, só avisa no console — o upload e o registro em `vistoria_fotos` já concluídos não são desfeitos.
+
+**Limitação assumida**: para fotos tiradas pela câmera do app, a marca d'água reflete o momento real da captura. Para fotos escolhidas da galeria (imagens já existentes no aparelho), o app usa a data/hora do momento em que a foto foi *anexada* no checklist, não a data EXIF original do arquivo — ler o EXIF de verdade exigiria uma biblioteca externa, fora do escopo pedido.
 
 ### Resiliência a nomes de coluna alternativos
 
@@ -91,7 +106,7 @@ O botão "Foto" de cada item abre `CameraCaptureModal` — câmera em tela cheia
 Tabelas envolvidas — rode novamente `supabase/schema.sql` (é idempotente) para aplicar:
 
 - `vistoria_ambientes` — um ambiente vistoriado (`vistoria_id`, `ambiente`, `nome`).
-- `vistoria_itens` — cada item de um ambiente (`ambiente_id`, `item`/`nome`, `estado`/`status` — opcional, `null` até ser avaliado, sem CHECK —, `funcionamento`, `observacao`). Não tem mais unicidade por nome: itens são linhas próprias, criadas de verdade ao adicionar o ambiente (os 12 padrão) ou via "+ Adicionar Outro Item".
+- `vistoria_itens` — cada item de um ambiente (`ambiente_id`, `item`/`nome`, `estado`/`status` — opcional, `null` até ser avaliado, sem CHECK —, `funcionamento`, `observacao`, `fotos_urls` — array espelhando as URLs de `vistoria_fotos`). Não tem mais unicidade por nome: itens são linhas próprias, criadas de verdade ao adicionar o ambiente (os 12 padrão) ou via "+ Adicionar Outro Item".
 - `vistoria_fotos` — ganhou a coluna `item_id` (além de `ambiente_id`, que continua obrigatório): cada foto agora se vincula a um item específico.
 - `vistorias` ganhou `assinatura_url`, `finalizada_em` e `laudo_preenchido` (jsonb) — este último recebe, **a cada alteração no checklist**, um snapshot JSON da estrutura completa (ambientes → itens → fotos), útil para consulta/exportação sem precisar recompor os joins. Essa sincronização roda em segundo plano (efeito colateral "melhor esforço": se falhar, só avisa no console, nunca trava a tela).
 

@@ -388,28 +388,75 @@ export function useVistoriaExecucao(vistoriaId) {
   )
 
   // Fotos exigem um arquivo de verdade enviado ao Storage — não há
-  // como "fingir" localmente um upload que nunca aconteceu, então
-  // aqui o erro continua sendo lançado (o FotoUploader já mostra a
-  // mensagem inline) em vez de fabricar uma foto que não existe.
+  // como "fingir" localmente um upload que nunca aconteceu. Exceção:
+  // se o ITEM em si ainda não foi sincronizado (id local, "local-..."),
+  // nem tenta gravar em vistoria_fotos (a FK pra um item que não
+  // existe no banco falharia) — só guarda uma prévia local da foto,
+  // marcada como não sincronizada, igual ao resto do fluxo.
   const addFotoItem = useCallback(
     async (ambienteId, itemId, file) => {
+      if (isLocalId(itemId)) {
+        const urlLocal = URL.createObjectURL(file)
+        const fotoLocal = {
+          id: buildLocalId('foto'),
+          ambiente_id: ambienteId,
+          item_id: itemId,
+          url: urlLocal,
+          _naoSincronizado: true
+        }
+        setAmbientes((prev) =>
+          prev.map((a) =>
+            a.id === ambienteId
+              ? {
+                  ...a,
+                  vistoria_itens: (a.vistoria_itens || []).map((it) =>
+                    it.id === itemId ? { ...it, vistoria_fotos: [...(it.vistoria_fotos || []), fotoLocal] } : it
+                  )
+                }
+              : a
+          )
+        )
+        return fotoLocal
+      }
+
       const path = `${vistoriaId}/${ambienteId}/${itemId}/${Date.now()}-${file.name}`
-      const { error: upErr } = await supabase.storage.from(FOTOS_BUCKET).upload(path, file)
+      const { error: upErr } = await supabase.storage
+        .from(FOTOS_BUCKET)
+        .upload(path, file, { contentType: file.type || 'image/jpeg' })
       if (upErr) {
         console.error('[useVistoriaExecucao] Erro do Supabase ao enviar foto:', upErr.message, upErr)
         throw upErr
       }
 
       const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
+      const url = pub.publicUrl
 
       const { data, error } = await supabase
         .from('vistoria_fotos')
-        .insert({ ambiente_id: ambienteId, item_id: itemId, url: pub.publicUrl })
+        .insert({ ambiente_id: ambienteId, item_id: itemId, url })
         .select()
         .single()
       if (error) {
         console.error('[useVistoriaExecucao] Erro do Supabase ao salvar registro da foto:', error.message, error)
         throw error
+      }
+
+      // Espelha a URL também em vistoria_itens.fotos_urls (array),
+      // além da linha em vistoria_fotos — melhor esforço: se essa
+      // coluna ainda não existir, só avisa no console, sem quebrar
+      // o upload que já foi feito com sucesso.
+      const itemAtual = ambientes
+        .find((a) => a.id === ambienteId)
+        ?.vistoria_itens?.find((it) => it.id === itemId)
+      const urlsAtuais = Array.isArray(itemAtual?.fotos_urls) ? itemAtual.fotos_urls : []
+      const novasUrls = [...urlsAtuais, url]
+
+      const { error: arrErr } = await supabase.from('vistoria_itens').update({ fotos_urls: novasUrls }).eq('id', itemId)
+      if (arrErr) {
+        console.warn(
+          '[useVistoriaExecucao] Não foi possível atualizar vistoria_itens.fotos_urls (a coluna existe?):',
+          arrErr.message
+        )
       }
 
       setAmbientes((prev) =>
@@ -418,7 +465,9 @@ export function useVistoriaExecucao(vistoriaId) {
             ? {
                 ...a,
                 vistoria_itens: (a.vistoria_itens || []).map((it) =>
-                  it.id === itemId ? { ...it, vistoria_fotos: [...(it.vistoria_fotos || []), data] } : it
+                  it.id === itemId
+                    ? { ...it, vistoria_fotos: [...(it.vistoria_fotos || []), data], fotos_urls: novasUrls }
+                    : it
                 )
               }
             : a
@@ -426,7 +475,7 @@ export function useVistoriaExecucao(vistoriaId) {
       )
       return data
     },
-    [vistoriaId]
+    [vistoriaId, ambientes]
   )
 
   const removeFotoItem = useCallback(async (ambienteId, itemId, fotoId) => {

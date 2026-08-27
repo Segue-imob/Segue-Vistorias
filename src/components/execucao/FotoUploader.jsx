@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Camera, Loader2, X } from 'lucide-react'
 import CameraCaptureModal from './CameraCaptureModal'
 import { MAX_FOTOS_POR_ITEM } from '../../lib/vistoriaExecucao'
+import { processarArquivoParaUpload } from '../../lib/imageProcessing'
 
 export default function FotoUploader({ fotos, onUpload, onRemove }) {
   const inputRef = useRef(null)
@@ -27,7 +28,12 @@ export default function FotoUploader({ fotos, onUpload, onRemove }) {
           setErrorMsg(`Limite de ${MAX_FOTOS_POR_ITEM} fotos por item atingido — nem todas as fotos foram enviadas.`)
           break
         }
-        await onUpload(files[i])
+        // Marca d'água de data/hora + redimensiona (máx. 1280px) +
+        // comprime (WebP/JPEG a 70%) ANTES de subir pro Storage —
+        // nunca lança erro: se o processamento falhar, cai pra foto
+        // original sem tratamento em vez de travar o upload.
+        const arquivoProcessado = await processarArquivoParaUpload(files[i])
+        await onUpload(arquivoProcessado)
         setProgresso({ atual: i + 1, total: files.length })
       }
     } catch (err) {
