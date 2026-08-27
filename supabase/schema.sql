@@ -504,3 +504,14 @@ alter table public.vistoria_itens add column if not exists funcionamento text;
 -- Bloco idempotente: seguro rodar de novo.
 -- ============================================================
 alter table public.vistoria_itens add column if not exists fotos_urls jsonb default '[]'::jsonb;
+
+-- ============================================================
+-- Payload completo de vistoria_fotos (retrocompatibilidade): além de
+-- ambiente_id e item_id, o front agora também envia vistoria_id
+-- (referência direta, sem precisar navegar item -> ambiente ->
+-- vistoria) e foto_url (nome alternativo de "url", mesmo valor).
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+alter table public.vistoria_fotos add column if not exists vistoria_id uuid references public.vistorias (id) on delete cascade;
+alter table public.vistoria_fotos add column if not exists foto_url text;
+create index if not exists idx_vistoria_fotos_vistoria on public.vistoria_fotos (vistoria_id);

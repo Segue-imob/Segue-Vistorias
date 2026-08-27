@@ -91,7 +91,11 @@ Todo upload — vindo da câmera custom ou do fallback de galeria — passa por 
 
 Se qualquer etapa falhar (navegador sem `createImageBitmap`, canvas bloqueado, etc.), `processarArquivoParaUpload` nunca lança — devolve a foto **original sem tratamento** em vez de travar o upload, e registra o erro exato no console.
 
-**Vínculo no banco**: cada foto processada é enviada ao bucket, e a URL pública resultante é gravada em **dois lugares** — a linha em `vistoria_fotos` (vinculada por `item_id`, como já era) e também acrescentada ao array `vistoria_itens.fotos_urls` (coluna nova). A segunda gravação é "melhor esforço": se a coluna `fotos_urls` ainda não existir no seu banco, só avisa no console — o upload e o registro em `vistoria_fotos` já concluídos não são desfeitos.
+**Vínculo no banco**: cada foto processada é enviada ao bucket, e a URL pública resultante é gravada em **dois lugares em paralelo**:
+1. Uma linha em `vistoria_fotos`, com o payload completo (retrocompatibilidade): `{ vistoria_id, ambiente_id, item_id, foto_url, url }` — `foto_url` e `url` sempre com o mesmo valor.
+2. Acrescentada ao array `vistoria_itens.fotos_urls`.
+
+A miniatura aparece na tela **imediatamente** assim que o upload ao Storage termina, independente do resultado dessas duas gravações — se o `insert` em `vistoria_fotos` falhar (ex.: coluna nova ainda não propagada no cache do PostgREST), a foto não some: `fotos_urls` funciona como rede de segurança (a URL sobrevive lá mesmo sem a linha em `vistoria_fotos`), a miniatura continua visível com um selo "não sincronizado", e o erro exato vai pro console — nunca lança exceção que interrompa o restante do lote de fotos sendo enviado.
 
 **Limitação assumida**: para fotos tiradas pela câmera do app, a marca d'água reflete o momento real da captura. Para fotos escolhidas da galeria (imagens já existentes no aparelho), o app usa a data/hora do momento em que a foto foi *anexada* no checklist, não a data EXIF original do arquivo — ler o EXIF de verdade exigiria uma biblioteca externa, fora do escopo pedido.
 
@@ -107,7 +111,7 @@ Tabelas envolvidas — rode novamente `supabase/schema.sql` (é idempotente) par
 
 - `vistoria_ambientes` — um ambiente vistoriado (`vistoria_id`, `ambiente`, `nome`).
 - `vistoria_itens` — cada item de um ambiente (`ambiente_id`, `item`/`nome`, `estado`/`status` — opcional, `null` até ser avaliado, sem CHECK —, `funcionamento`, `observacao`, `fotos_urls` — array espelhando as URLs de `vistoria_fotos`). Não tem mais unicidade por nome: itens são linhas próprias, criadas de verdade ao adicionar o ambiente (os 12 padrão) ou via "+ Adicionar Outro Item".
-- `vistoria_fotos` — ganhou a coluna `item_id` (além de `ambiente_id`, que continua obrigatório): cada foto agora se vincula a um item específico.
+- `vistoria_fotos` — colunas: `ambiente_id` (obrigatório), `item_id`, `vistoria_id` e `foto_url` (espelha `url`) — payload completo enviado a cada insert, para retrocompatibilidade com diferentes nomes de coluna.
 - `vistorias` ganhou `assinatura_url`, `finalizada_em` e `laudo_preenchido` (jsonb) — este último recebe, **a cada alteração no checklist**, um snapshot JSON da estrutura completa (ambientes → itens → fotos), útil para consulta/exportação sem precisar recompor os joins. Essa sincronização roda em segundo plano (efeito colateral "melhor esforço": se falhar, só avisa no console, nunca trava a tela).
 
 ### "column vistorias.X does not exist" mesmo depois de rodar o `ALTER TABLE`

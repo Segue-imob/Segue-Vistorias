@@ -424,6 +424,9 @@ export function useVistoriaExecucao(vistoriaId) {
         .from(FOTOS_BUCKET)
         .upload(path, file, { contentType: file.type || 'image/jpeg' })
       if (upErr) {
+        // Aqui sim é um erro de verdade sem saída: se o arquivo nem
+        // chegou a subir pro Storage, não existe URL nenhuma pra
+        // salvar em lugar nenhum — não tem como "não perder a foto".
         console.error('[useVistoriaExecucao] Erro do Supabase ao enviar foto:', upErr.message, upErr)
         throw upErr
       }
@@ -431,20 +434,48 @@ export function useVistoriaExecucao(vistoriaId) {
       const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
       const url = pub.publicUrl
 
-      const { data, error } = await supabase
+      // Registra em vistoria_fotos com o payload completo (retrocompat:
+      // vistoria_id, ambiente_id, item_id, foto_url E url, todos
+      // apontando pra mesma URL). Se esse INSERT falhar, a foto NÃO se
+      // perde — ela já está no Storage — então cai no fallback abaixo
+      // em vez de lançar erro.
+      const { data: fotoInserida, error: fotoErr } = await supabase
         .from('vistoria_fotos')
-        .insert({ ambiente_id: ambienteId, item_id: itemId, url })
+        .insert({
+          vistoria_id: vistoriaId,
+          ambiente_id: ambienteId,
+          item_id: itemId,
+          foto_url: url,
+          url
+        })
         .select()
         .single()
-      if (error) {
-        console.error('[useVistoriaExecucao] Erro do Supabase ao salvar registro da foto:', error.message, error)
-        throw error
+
+      let fotoFinal
+      if (fotoErr) {
+        console.error(
+          '[useVistoriaExecucao] Erro do Supabase ao salvar registro em vistoria_fotos — a foto já está no ' +
+            'Storage e NÃO será perdida, só o registro na tabela falhou (veja fotos_urls como rede de segurança):',
+          fotoErr.message,
+          fotoErr
+        )
+        fotoFinal = {
+          id: buildLocalId('foto'),
+          vistoria_id: vistoriaId,
+          ambiente_id: ambienteId,
+          item_id: itemId,
+          foto_url: url,
+          url,
+          _naoSincronizado: true
+        }
+      } else {
+        fotoFinal = fotoInserida
       }
 
-      // Espelha a URL também em vistoria_itens.fotos_urls (array),
-      // além da linha em vistoria_fotos — melhor esforço: se essa
-      // coluna ainda não existir, só avisa no console, sem quebrar
-      // o upload que já foi feito com sucesso.
+      // Espelha a URL em vistoria_itens.fotos_urls — SEMPRE tenta,
+      // mesmo quando o insert acima falhou: é a rede de segurança do
+      // item 3, garantindo que a URL sobrevive em algum lugar do banco
+      // mesmo se o registro em vistoria_fotos não tiver ido adiante.
       const itemAtual = ambientes
         .find((a) => a.id === ambienteId)
         ?.vistoria_itens?.find((it) => it.id === itemId)
@@ -459,6 +490,8 @@ export function useVistoriaExecucao(vistoriaId) {
         )
       }
 
+      // Exibe a miniatura na hora, independente do resultado das duas
+      // gravações acima — a foto nunca fica invisível pro vistoriador.
       setAmbientes((prev) =>
         prev.map((a) =>
           a.id === ambienteId
@@ -466,14 +499,14 @@ export function useVistoriaExecucao(vistoriaId) {
                 ...a,
                 vistoria_itens: (a.vistoria_itens || []).map((it) =>
                   it.id === itemId
-                    ? { ...it, vistoria_fotos: [...(it.vistoria_fotos || []), data], fotos_urls: novasUrls }
+                    ? { ...it, vistoria_fotos: [...(it.vistoria_fotos || []), fotoFinal], fotos_urls: novasUrls }
                     : it
                 )
               }
             : a
         )
       )
-      return data
+      return fotoFinal
     },
     [vistoriaId, ambientes]
   )
