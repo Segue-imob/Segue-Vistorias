@@ -515,3 +515,17 @@ alter table public.vistoria_itens add column if not exists fotos_urls jsonb defa
 alter table public.vistoria_fotos add column if not exists vistoria_id uuid references public.vistorias (id) on delete cascade;
 alter table public.vistoria_fotos add column if not exists foto_url text;
 create index if not exists idx_vistoria_fotos_vistoria on public.vistoria_fotos (vistoria_id);
+
+-- ============================================================
+-- Encerramento com data redundante + observações finais + laudo em
+-- PDF: `finalizada_em` e `concluida_em` recebem o mesmo timestamp
+-- (retrocompatibilidade de nome de coluna, como os outros pares já
+-- existentes). `laudo_pdf_url` é preenchido pelo botão "Imprimir /
+-- Baixar Laudo PDF" (gera o PDF no navegador via @react-pdf/renderer,
+-- sobe pro Storage e grava a URL aqui — melhor esforço, nunca
+-- impede o download já feito no dispositivo do vistoriador).
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+alter table public.vistorias add column if not exists concluida_em timestamptz;
+alter table public.vistorias add column if not exists laudo_pdf_url text;
+alter table public.vistorias add column if not exists observacoes_finais text;

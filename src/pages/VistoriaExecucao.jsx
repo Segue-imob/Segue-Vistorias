@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, MapPin, Plus } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileDown, Loader2, MapPin, Plus } from 'lucide-react'
 import { useVistoriaExecucao } from '../hooks/useVistoriaExecucao'
 import { useAuth } from '../context/AuthContext'
 import { isAdmin } from '../lib/permissions'
@@ -9,6 +9,7 @@ import ItemCard from '../components/execucao/ItemCard'
 import FinalizarVistoriaModal from '../components/execucao/FinalizarVistoriaModal'
 import StatusBadge from '../components/StatusBadge'
 import { AMBIENTES_PADRAO, buildMapsUrl } from '../lib/vistoriaExecucao'
+import { gerarLaudoPdfBlob } from '../lib/laudoPdf'
 
 export default function VistoriaExecucao() {
   const { id } = useParams()
@@ -29,7 +30,8 @@ export default function VistoriaExecucao() {
     updateItemObservacao,
     addFotoItem,
     removeFotoItem,
-    finalizarVistoria
+    finalizarVistoria,
+    salvarLaudoPdf
   } = useVistoriaExecucao(id)
 
   // Nível 1 = null (lista de ambientes) · Nível 2 = id do ambiente aberto
@@ -45,6 +47,8 @@ export default function VistoriaExecucao() {
   const [addItemError, setAddItemError] = useState('')
 
   const [finalizarOpen, setFinalizarOpen] = useState(false)
+  const [gerandoPdf, setGerandoPdf] = useState(false)
+  const [pdfErrorMsg, setPdfErrorMsg] = useState('')
 
   const activeAmbiente = useMemo(
     () => ambientes.find((a) => a.id === activeAmbienteId) || null,
@@ -123,10 +127,40 @@ export default function VistoriaExecucao() {
     if (activeAmbienteId === ambienteId) setActiveAmbienteId(null)
   }
 
-  const handleFinalizarConfirm = async (signatureBlob) => {
-    await finalizarVistoria(signatureBlob)
+  const handleFinalizarConfirm = async (signatureBlob, observacoesFinais) => {
+    await finalizarVistoria(signatureBlob, observacoesFinais)
     setFinalizarOpen(false)
-    navigate('/minhas-vistorias')
+    // Fica na própria tela (agora em modo somente leitura) em vez de
+    // navegar embora — é aqui que mora o botão de gerar o laudo em PDF.
+  }
+
+  const handleGerarLaudo = async () => {
+    setGerandoPdf(true)
+    setPdfErrorMsg('')
+    try {
+      const blob = await gerarLaudoPdfBlob(vistoria, ambientes)
+
+      // Dispara o download direto no dispositivo do vistoriador.
+      const nomeArquivo = `laudo-${vistoria.imoveis?.codigo_imovel || 'vistoria'}.pdf`
+      const urlObjeto = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = urlObjeto
+      link.download = nomeArquivo
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(urlObjeto)
+
+      // Sobe o mesmo PDF pro Storage e grava laudo_pdf_url — melhor
+      // esforço: se falhar, o download acima já aconteceu, então o
+      // vistoriador não fica sem o arquivo por causa disso.
+      await salvarLaudoPdf(blob)
+    } catch (err) {
+      console.error('[VistoriaExecucao] Erro ao gerar o laudo em PDF:', err.message, err)
+      setPdfErrorMsg(err.message || 'Erro ao gerar o PDF do laudo.')
+    } finally {
+      setGerandoPdf(false)
+    }
   }
 
   return (
@@ -232,6 +266,16 @@ export default function VistoriaExecucao() {
             <div className="card border-l-4 border-l-[#4CAF50] p-4">
               <p className="text-sm font-semibold text-brand-900">Esta vistoria já foi encerrada.</p>
               <p className="mt-0.5 text-xs text-slate-500">O checklist abaixo está em modo somente leitura.</p>
+              <button
+                type="button"
+                onClick={handleGerarLaudo}
+                disabled={gerandoPdf}
+                className="btn-primary mt-3 !py-2 text-xs"
+              >
+                {gerandoPdf ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+                Imprimir / Baixar Laudo PDF
+              </button>
+              {pdfErrorMsg && <p className="mt-2 text-xs font-medium text-red-500">{pdfErrorMsg}</p>}
             </div>
           )}
 

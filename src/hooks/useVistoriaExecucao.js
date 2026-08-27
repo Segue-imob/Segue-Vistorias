@@ -576,9 +576,21 @@ export function useVistoriaExecucao(vistoriaId) {
     setVistoria((v) => (v ? { ...v, status: 'aceita' } : v))
   }, [vistoriaId])
 
-  /** Envia a assinatura (Blob PNG) para o Storage e finaliza a vistoria. */
+  /**
+   * Envia a assinatura (Blob PNG) para o Storage e finaliza a vistoria.
+   *
+   * Sobre `status`: mantive `'finalizada'` (não `'Concluída'`) de
+   * propósito — é o valor que toda a aplicação já usa pra decidir o
+   * que é "vistoria encerrada" (aba Concluídas, cores do Kanban,
+   * badge de status, a própria checagem `isEncerrada` desta tela).
+   * Trocar o valor faria a vistoria "sumir" de todos esses lugares,
+   * já que nenhum filtro reconheceria o novo texto. `finalizada_em`
+   * e `concluida_em` são gravados juntos (mesmo timestamp) por
+   * retrocompatibilidade de nome de coluna, como já fazemos em
+   * outros pares (ambiente/nome, item/nome, estado/status).
+   */
   const finalizarVistoria = useCallback(
-    async (assinaturaBlob) => {
+    async (assinaturaBlob, observacoesFinais) => {
       const path = `${vistoriaId}/assinatura/${Date.now()}.png`
       const { error: upErr } = await supabase.storage
         .from(FOTOS_BUCKET)
@@ -586,21 +598,70 @@ export function useVistoriaExecucao(vistoriaId) {
       if (upErr) throw upErr
 
       const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
+      const agora = new Date().toISOString()
 
       const { error } = await supabase
         .from('vistorias')
         .update({
           status: 'finalizada',
+          finalizada_em: agora,
+          concluida_em: agora,
           assinatura_url: pub.publicUrl,
-          finalizada_em: new Date().toISOString(),
+          observacoes_finais: observacoesFinais || null,
           laudo_preenchido: JSON.stringify(ambientes)
         })
         .eq('id', vistoriaId)
       if (error) throw error
 
-      setVistoria((v) => (v ? { ...v, status: 'finalizada', assinatura_url: pub.publicUrl } : v))
+      setVistoria((v) =>
+        v
+          ? {
+              ...v,
+              status: 'finalizada',
+              finalizada_em: agora,
+              concluida_em: agora,
+              assinatura_url: pub.publicUrl,
+              observacoes_finais: observacoesFinais || null
+            }
+          : v
+      )
     },
     [vistoriaId, ambientes]
+  )
+
+  /**
+   * Gera o PDF do laudo (ver src/lib/laudoPdf.jsx), sobe pro Storage e
+   * grava a URL em `vistorias.laudo_pdf_url` — melhor esforço: nunca
+   * lança, só avisa no console se algo falhar (o download do PDF pro
+   * dispositivo do vistoriador já aconteceu antes de chamar isto,
+   * então uma falha aqui não faz o laudo "sumir" pra ele).
+   */
+  const salvarLaudoPdf = useCallback(
+    async (blob) => {
+      const path = `${vistoriaId}/laudo/${Date.now()}.pdf`
+      const { error: upErr } = await supabase.storage
+        .from(FOTOS_BUCKET)
+        .upload(path, blob, { contentType: 'application/pdf' })
+      if (upErr) {
+        console.warn('[useVistoriaExecucao] Não foi possível salvar o laudo em PDF no Storage:', upErr.message)
+        return null
+      }
+
+      const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
+
+      const { error: updErr } = await supabase
+        .from('vistorias')
+        .update({ laudo_pdf_url: pub.publicUrl })
+        .eq('id', vistoriaId)
+      if (updErr) {
+        console.warn('[useVistoriaExecucao] Não foi possível gravar laudo_pdf_url:', updErr.message)
+        return null
+      }
+
+      setVistoria((v) => (v ? { ...v, laudo_pdf_url: pub.publicUrl } : v))
+      return pub.publicUrl
+    },
+    [vistoriaId]
   )
 
   return {
@@ -619,6 +680,7 @@ export function useVistoriaExecucao(vistoriaId) {
     addFotoItem,
     removeFotoItem,
     aceitarVistoria,
-    finalizarVistoria
+    finalizarVistoria,
+    salvarLaudoPdf
   }
 }

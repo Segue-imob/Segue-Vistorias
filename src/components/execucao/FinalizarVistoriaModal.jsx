@@ -6,6 +6,7 @@ import { ESTADOS_ITEM } from '../../lib/vistoriaExecucao'
 
 export default function FinalizarVistoriaModal({ open, onClose, ambientes, onConfirm }) {
   const signatureRef = useRef(null)
+  const [observacoesFinais, setObservacoesFinais] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -30,7 +31,7 @@ export default function FinalizarVistoriaModal({ open, onClose, ambientes, onCon
     setSubmitting(true)
     try {
       const blob = await signatureRef.current.toBlob()
-      await onConfirm(blob)
+      await onConfirm(blob, observacoesFinais)
     } catch (err) {
       setErrorMsg(err.message || 'Erro ao finalizar a vistoria. Tente novamente.')
     } finally {
@@ -98,6 +99,17 @@ export default function FinalizarVistoriaModal({ open, onClose, ambientes, onCon
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
           {ambientes.length} ambiente(s) · {totalItensAvaliados}/{totalItens} itens avaliados · {totalFotos} foto(s)
         </p>
+
+        <div>
+          <label className="label-field">Observações finais</label>
+          <textarea
+            rows={2}
+            className="input-field resize-none"
+            placeholder="Considerações gerais sobre a vistoria (opcional)"
+            value={observacoesFinais}
+            onChange={(e) => setObservacoesFinais(e.target.value)}
+          />
+        </div>
 
         <div>
           <label className="label-field">Assinatura do vistoriador</label>

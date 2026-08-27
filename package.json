@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^3.4.4",
     "@supabase/supabase-js": "^2.45.4",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.441.0",

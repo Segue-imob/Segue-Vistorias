@@ -81,7 +81,38 @@ O botão "Foto" de cada item abre `CameraCaptureModal` — câmera em tela cheia
 
 **Atenção**: `getUserMedia` exige contexto seguro — funciona em `https://` e em `localhost`, mas **não funciona em HTTP puro** (comum em preview de rede local tipo `http://192.168.x.x`). Isso não é uma limitação do código, é uma exigência de segurança do próprio navegador.
 
-### Visualização em tela cheia e remoção de fotos
+### Encerramento e laudo em PDF
+
+Ao clicar em "Finalizar e Salvar Vistoria" (modal de encerramento, que agora também tem um campo de **Observações finais**), `finalizarVistoria` grava:
+
+```js
+{
+  status: 'finalizada',        // ver nota abaixo — não 'Concluída'
+  finalizada_em: <timestamp>,
+  concluida_em: <mesmo timestamp>,   // redundante, por retrocompatibilidade
+  assinatura_url: <URL da assinatura no Storage>,
+  observacoes_finais: <texto do campo novo, ou null>,
+  laudo_preenchido: <snapshot JSON de ambientes/itens/fotos>
+}
+```
+
+**Por que `status` continua `'finalizada'` e não virou `'Concluída'`**: essa é a string que toda a aplicação já usa pra decidir o que é "vistoria encerrada" — a aba Concluídas em Minhas Vistorias, as cores do Kanban, o `StatusBadge`, e a própria variável `isEncerrada` desta tela. Trocar o valor faria a vistoria "desaparecer" desses lugares (nenhum filtro reconheceria o texto novo), mesmo com o dado certo salvo no banco. A palavra já aparece como **"Finalizada"** pro usuário final — mesma ideia de "Concluída", sem quebrar nada.
+
+Depois de finalizar, a tela **não navega mais embora automaticamente** — fica na própria vistoria, agora em modo somente leitura, porque é aqui que mora o botão do laudo.
+
+**Botão "Imprimir / Baixar Laudo PDF"** (aparece só quando a vistoria está encerrada): gera o laudo 100% no navegador via `@react-pdf/renderer` (`src/lib/laudoPdf.jsx`) — sem depender de servidor. O documento inclui:
+- Cabeçalho com a marca "SEGUE Vistorias" e os dados do imóvel (código, endereço, bairro/cidade, tipo, data, inquilino/proprietário);
+- Uma tabela por ambiente, com todos os itens e suas colunas de Condição, Funcionamento e Observações;
+- Grade de fotos de cada ambiente — como as fotos já saem do upload com a marca d'água de data/hora **queimada nos próprios pixels** (ver seção de tratamento de fotos acima), exibi-las aqui já cumpre esse requisito sem precisar redesenhar nada;
+- Bloco final com a imagem da assinatura digital e a data de encerramento.
+
+Ao clicar, o PDF é baixado direto no dispositivo do vistoriador (via link temporário) **e** enviado ao Storage, gravando a URL em `vistorias.laudo_pdf_url` — essa segunda parte é melhor esforço: se falhar, o download já feito não é desfeito, só fica sem o link permanente salvo no banco.
+
+**Por que `@react-pdf/renderer` em vez de `html2pdf.js`/`window.print()`**: das três opções que você deu, essa foi a única que gera um `Blob` de verdade no navegador — necessário pra poder subir o arquivo pro Storage e preencher `laudo_pdf_url`. `window.print()` delega pro diálogo de impressão do sistema operacional e nunca dá acesso a esse Blob (o "Salvar como PDF" acontece do lado de fora do JavaScript), então não daria pra popular essa coluna automaticamente.
+
+**Isso é uma dependência nova** (`@react-pdf/renderer`, adicionada em `package.json`) — este ambiente não tem acesso à internet pra rodar `npm install` e testar a geração de ponta a ponta, então rode `npm install` localmente antes de testar o botão pela primeira vez.
+
+
 
 Tocar em qualquer miniatura do checklist abre `PhotoLightbox` (novo componente) — foto ampliada em tela cheia (`object-contain`, sem cortar), botão **✕ Fechar** no topo, clique fora da imagem também fecha (o clique na própria foto não propaga, só a área ao redor), e rodapé com a data/hora de envio (`foto.created_at`, formatada em pt-BR).
 
