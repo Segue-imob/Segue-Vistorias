@@ -53,7 +53,7 @@ export default function FinalizarVistoriaModal({ open, onClose, ambientes, onCon
           ) : (
             ambientes.map((a) => (
               <div key={a.id} className="border-b border-brand-border/50 pb-2 last:border-0 last:pb-0">
-                <p className="text-sm font-semibold text-brand-900">{a.ambiente}</p>
+                <p className="text-sm font-semibold text-brand-900">{a.ambiente || a.nome}</p>
 
                 <div className="mt-1.5 space-y-1.5">
                   {(a.vistoria_itens || []).map((it) => {
@@ -62,7 +62,7 @@ export default function FinalizarVistoriaModal({ open, onClose, ambientes, onCon
                     return (
                       <div key={it.id} className="flex items-start justify-between gap-2 text-xs">
                         <div className="min-w-0">
-                          <span className="font-medium text-slate-600">{it.item}</span>
+                          <span className="font-medium text-slate-600">{it.item || it.nome}</span>
                           {it.observacao && (
                             <p className="truncate text-[11px] text-slate-400">{it.observacao}</p>
                           )}

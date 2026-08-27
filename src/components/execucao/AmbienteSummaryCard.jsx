@@ -1,6 +1,7 @@
-import { ChevronRight, Trash2 } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Trash2 } from 'lucide-react'
 
 export default function AmbienteSummaryCard({ ambiente, onVistoriar, onRemove, readOnly = false }) {
+  const nomeAmbiente = ambiente.ambiente || ambiente.nome || 'Ambiente'
   const itens = ambiente.vistoria_itens || []
   const total = itens.length
   const avaliados = itens.filter((it) => it.estado).length
@@ -9,7 +10,17 @@ export default function AmbienteSummaryCard({ ambiente, onVistoriar, onRemove, r
   return (
     <div className="card flex items-center justify-between gap-3 p-4">
       <button type="button" onClick={onVistoriar} className="min-w-0 flex-1 text-left">
-        <p className="text-sm font-bold text-brand-900">{ambiente.ambiente}</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="text-sm font-bold text-brand-900">{nomeAmbiente}</p>
+          {ambiente._naoSincronizado && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600"
+              title="Ainda não confirmado no servidor — continue trabalhando, tentaremos de novo quando a conexão voltar."
+            >
+              <AlertTriangle size={10} /> não sincronizado
+            </span>
+          )}
+        </div>
         <p className="mt-0.5 text-xs font-medium text-slate-500">
           {avaliados}/{total} itens avaliados
         </p>

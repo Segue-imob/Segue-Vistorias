@@ -140,7 +140,7 @@ export default function VistoriaExecucao() {
         </button>
         <div className="min-w-0">
           <p className="truncate text-base font-bold text-brand-900">
-            {activeAmbiente ? activeAmbiente.ambiente : vistoria.imoveis?.codigo_imovel}
+            {activeAmbiente ? activeAmbiente.ambiente || activeAmbiente.nome : vistoria.imoveis?.codigo_imovel}
           </p>
           <p className="truncate text-xs text-slate-500">
             {activeAmbiente

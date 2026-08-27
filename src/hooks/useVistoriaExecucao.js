@@ -2,6 +2,36 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { FOTOS_BUCKET, ITENS_PADRAO } from '../lib/vistoriaExecucao'
 
+// IDs "locais" (fallback): usados quando o INSERT no Supabase falha em
+// campo (sem conexão, coluna divergente, etc.) e ainda assim
+// precisamos manter o vistoriador trabalhando. Nunca são UUIDs reais,
+// então qualquer operação subsequente sobre eles (mudar estado,
+// observação, apagar) fica só em memória — não há linha no banco
+// pra atualizar.
+function buildLocalId(prefix) {
+  return `local-${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+}
+function isLocalId(id) {
+  return typeof id === 'string' && id.startsWith('local-')
+}
+
+/**
+ * Insere em `table` e, se o Supabase retornar erro, registra a
+ * mensagem EXATA no console e devolve uma linha "local" construída
+ * por `buildFallback()` em vez de lançar — a interface continua
+ * funcional e o vistoriador não trava em campo. `persisted: false`
+ * sinaliza pro chamador (e pra UI) que aquela linha não foi
+ * confirmada no banco.
+ */
+async function insertResiliente(table, payload, buildFallback) {
+  const { data, error } = await supabase.from(table).insert(payload).select('*').single()
+  if (error) {
+    console.error(`[useVistoriaExecucao] Erro do Supabase ao inserir em "${table}":`, error.message, error)
+    return { row: { ...buildFallback(), _naoSincronizado: true }, persisted: false }
+  }
+  return { row: data, persisted: true }
+}
+
 /**
  * Carrega uma vistoria (com dados do imóvel) e o checklist em 2 níveis
  * (ambientes -> itens -> fotos), e expõe as operações usadas pela tela
@@ -9,13 +39,19 @@ import { FOTOS_BUCKET, ITENS_PADRAO } from '../lib/vistoriaExecucao'
  *
  * Todas as consultas usam select('*') em vez de listar colunas — isso
  * evita que o carregamento quebre quando o banco tem colunas a mais/a
- * menos do que o código espera (ex.: uma tabela criada manualmente
- * com um script à parte). Ambientes, itens e fotos são buscados em
- * 3 consultas separadas (não um único select aninhado) e remontados em
- * memória: se `vistoria_fotos` ainda não existir no seu banco, por
- * exemplo, o checklist de ambientes/itens continua funcionando —
- * só fica sem fotos até a tabela ser criada, em vez de travar a
- * página inteira.
+ * menos do que o código espera. Ambientes, itens e fotos são buscados
+ * em 3 consultas separadas e remontados em memória: se uma tabela
+ * ainda não existir, o resto do checklist continua funcionando.
+ *
+ * Gravações (`insert`) de ambiente e de item enviam o nome em DUAS
+ * colunas possíveis (`nome`+`ambiente` / `nome`+`item`) e o estado em
+ * duas colunas possíveis (`estado`+`status`), para tolerar variações
+ * de schema entre projetos Supabase configurados de formas diferentes.
+ * Se mesmo assim o INSERT falhar, a linha aparece na tela como
+ * "não sincronizado" em vez de travar a operação — mas não fica
+ * fingindo que um item foi avaliado: itens novos SEMPRE nascem com
+ * estado nulo ("não avaliado"), nunca com um valor pré-preenchido tipo
+ * "Bom" — isso falsificaria o laudo antes do vistoriador olhar o item.
  */
 export function useVistoriaExecucao(vistoriaId) {
   const [vistoria, setVistoria] = useState(null)
@@ -35,8 +71,6 @@ export function useVistoriaExecucao(vistoriaId) {
     setLoading(true)
     const vid = String(vistoriaId).trim()
 
-    // 1) A vistoria em si (com o imóvel embutido) — se isso falhar, não
-    // há como montar a tela, então interrompe aqui.
     const { data: vistoriaData, error: vErr } = await supabase
       .from('vistorias')
       .select(
@@ -57,7 +91,6 @@ export function useVistoriaExecucao(vistoriaId) {
       return
     }
 
-    // 2) Ambientes desta vistoria.
     const { data: ambientesData, error: aErr } = await supabase
       .from('vistoria_ambientes')
       .select('*')
@@ -73,9 +106,6 @@ export function useVistoriaExecucao(vistoriaId) {
 
     const ambienteIds = (ambientesData || []).map((a) => a.id)
 
-    // 3) Itens de todos os ambientes de uma vez — melhor esforço: se a
-    // tabela/coluna ainda não existir, os ambientes continuam
-    // aparecendo (só sem os itens) em vez de travar a página.
     let itensData = []
     if (ambienteIds.length > 0) {
       const { data, error: iErr } = await supabase
@@ -92,7 +122,6 @@ export function useVistoriaExecucao(vistoriaId) {
 
     const itemIds = itensData.map((it) => it.id)
 
-    // 4) Fotos de todos os itens — mesmo tratamento de melhor esforço.
     let fotosData = []
     if (itemIds.length > 0) {
       const { data, error: fErr } = await supabase.from('vistoria_fotos').select('*').in('item_id', itemIds)
@@ -106,7 +135,6 @@ export function useVistoriaExecucao(vistoriaId) {
       }
     }
 
-    // Remonta a árvore ambiente -> itens -> fotos em memória.
     const montado = (ambientesData || []).map((amb) => ({
       ...amb,
       vistoria_itens: itensData
@@ -127,10 +155,9 @@ export function useVistoriaExecucao(vistoriaId) {
     fetchAll()
   }, [fetchAll])
 
-  // Sincroniza uma cópia da estrutura completa (ambientes -> itens ->
-  // fotos) em `vistorias.laudo_preenchido` a cada alteração — não
-  // bloqueia a UI nem lança erro: é um "melhor esforço" para permitir
-  // consultar/exportar o laudo direto da coluna sem recompor os joins.
+  // Sincroniza um snapshot da estrutura completa em
+  // `vistorias.laudo_preenchido` a cada alteração — melhor esforço,
+  // nunca trava a UI.
   useEffect(() => {
     if (!vistoriaId || loading) return
     if (primeiroCarregamento.current) {
@@ -149,31 +176,76 @@ export function useVistoriaExecucao(vistoriaId) {
   }, [ambientes, vistoriaId, loading])
 
   /**
-   * 1) Insere o ambiente em `vistoria_ambientes`, vinculado ao
-   * vistoria_id. 2) Assim que criado, insere automaticamente os 12
-   * itens padrão em `vistoria_itens` (estado começa null = "não
-   * avaliado"), o que já deixa o card do Nível 1 mostrando "0/12
-   * itens avaliados" antes mesmo de entrar no ambiente.
+   * 1) Insere o ambiente em `vistoria_ambientes` (enviando `nome` e
+   * `ambiente` juntos), vinculado ao vistoria_id.
+   * 2) Insere os 12 itens padrão em `vistoria_itens` (enviando `nome`
+   * e `item`; `estado`/`status` começam nulos — "não avaliado").
+   * Se qualquer uma das duas gravações falhar, a mensagem exata do
+   * Supabase vai pro console e o ambiente/itens aparecem na tela
+   * marcados como não sincronizados, sem travar o vistoriador.
    */
   const addAmbiente = useCallback(
     async (nome) => {
-      const { data: ambienteRow, error: ambErr } = await supabase
-        .from('vistoria_ambientes')
-        .insert({ vistoria_id: vistoriaId, ambiente: nome })
-        .select('*')
-        .single()
-      if (ambErr) throw ambErr
+      const { row: ambienteRow, persisted: ambientePersistido } = await insertResiliente(
+        'vistoria_ambientes',
+        { vistoria_id: vistoriaId, nome, ambiente: nome },
+        () => ({
+          id: buildLocalId('amb'),
+          vistoria_id: vistoriaId,
+          nome,
+          ambiente: nome,
+          created_at: new Date().toISOString()
+        })
+      )
 
-      const linhasItens = ITENS_PADRAO.map((item) => ({ ambiente_id: ambienteRow.id, item, estado: null }))
-      const { data: itensData, error: itensErr } = await supabase
-        .from('vistoria_itens')
-        .insert(linhasItens)
-        .select('*')
-      if (itensErr) throw itensErr
+      const linhasItens = ITENS_PADRAO.map((item) => ({
+        ambiente_id: ambienteRow.id,
+        nome: item,
+        item,
+        estado: null,
+        status: null
+      }))
+
+      let itensFinal
+      if (!ambientePersistido) {
+        // Ambiente já não foi salvo — nem tenta inserir os itens no
+        // banco (o ambiente_id nem existe lá); monta tudo localmente.
+        itensFinal = linhasItens.map((linha) => ({
+          id: buildLocalId('item'),
+          ...linha,
+          observacao: null,
+          created_at: new Date().toISOString(),
+          vistoria_fotos: [],
+          _naoSincronizado: true
+        }))
+      } else {
+        const { data: itensData, error: itensErr } = await supabase
+          .from('vistoria_itens')
+          .insert(linhasItens)
+          .select('*')
+        if (itensErr) {
+          console.error(
+            '[useVistoriaExecucao] Erro do Supabase ao inserir itens padrão:',
+            itensErr.message,
+            itensErr
+          )
+          itensFinal = linhasItens.map((linha) => ({
+            id: buildLocalId('item'),
+            ...linha,
+            observacao: null,
+            created_at: new Date().toISOString(),
+            vistoria_fotos: [],
+            _naoSincronizado: true
+          }))
+        } else {
+          itensFinal = (itensData || []).map((it) => ({ ...it, vistoria_fotos: [] }))
+        }
+      }
 
       const novoAmbiente = {
         ...ambienteRow,
-        vistoria_itens: (itensData || []).map((it) => ({ ...it, vistoria_fotos: [] }))
+        _naoSincronizado: !ambientePersistido,
+        vistoria_itens: itensFinal
       }
       setAmbientes((prev) => [...prev, novoAmbiente])
       return novoAmbiente
@@ -182,20 +254,39 @@ export function useVistoriaExecucao(vistoriaId) {
   )
 
   const removeAmbiente = useCallback(async (ambienteId) => {
-    const { error } = await supabase.from('vistoria_ambientes').delete().eq('id', ambienteId)
-    if (error) throw error
+    if (!isLocalId(ambienteId)) {
+      const { error } = await supabase.from('vistoria_ambientes').delete().eq('id', ambienteId)
+      if (error) {
+        console.error('[useVistoriaExecucao] Erro do Supabase ao remover ambiente:', error.message, error)
+      }
+    }
     setAmbientes((prev) => prev.filter((a) => a.id !== ambienteId))
   }, [])
 
-  /** "+ Adicionar Outro Item" ("Outros"): cria um item personalizado no ambiente. */
+  /** "+ Adicionar Outro Item": cria um item personalizado no ambiente. */
   const addItemCustom = useCallback(async (ambienteId, nomeItem) => {
-    const { data, error } = await supabase
-      .from('vistoria_itens')
-      .insert({ ambiente_id: ambienteId, item: nomeItem, estado: null })
-      .select('*')
-      .single()
-    if (error) throw error
-    const novoItem = { ...data, vistoria_fotos: [] }
+    const buildFallback = () => ({
+      id: buildLocalId('item'),
+      ambiente_id: ambienteId,
+      nome: nomeItem,
+      item: nomeItem,
+      estado: null,
+      status: null,
+      observacao: null
+    })
+
+    let novoItem
+    if (isLocalId(ambienteId)) {
+      novoItem = { ...buildFallback(), vistoria_fotos: [], _naoSincronizado: true }
+    } else {
+      const { row, persisted } = await insertResiliente(
+        'vistoria_itens',
+        { ambiente_id: ambienteId, nome: nomeItem, item: nomeItem, estado: null, status: null },
+        buildFallback
+      )
+      novoItem = { ...row, vistoria_fotos: [], _naoSincronizado: !persisted }
+    }
+
     setAmbientes((prev) =>
       prev.map((a) => (a.id === ambienteId ? { ...a, vistoria_itens: [...(a.vistoria_itens || []), novoItem] } : a))
     )
@@ -203,8 +294,12 @@ export function useVistoriaExecucao(vistoriaId) {
   }, [])
 
   const removeItem = useCallback(async (ambienteId, itemId) => {
-    const { error } = await supabase.from('vistoria_itens').delete().eq('id', itemId)
-    if (error) throw error
+    if (!isLocalId(itemId)) {
+      const { error } = await supabase.from('vistoria_itens').delete().eq('id', itemId)
+      if (error) {
+        console.error('[useVistoriaExecucao] Erro do Supabase ao remover item:', error.message, error)
+      }
+    }
     setAmbientes((prev) =>
       prev.map((a) =>
         a.id === ambienteId
@@ -214,9 +309,6 @@ export function useVistoriaExecucao(vistoriaId) {
     )
   }, [])
 
-  // Faz merge (não substitui) — assim os campos que não vieram na
-  // resposta do UPDATE (ex.: vistoria_fotos, que não é mais buscada
-  // via embed) continuam preservados no item local.
   const patchItem = useCallback((ambienteId, itemId, patch) => {
     setAmbientes((prev) =>
       prev.map((a) =>
@@ -227,39 +319,63 @@ export function useVistoriaExecucao(vistoriaId) {
     )
   }, [])
 
+  /** Estado real escolhido pelo vistoriador — grava em `estado` e `status` juntos. */
   const setItemEstado = useCallback(
     async (ambienteId, itemId, estado) => {
+      if (isLocalId(itemId)) {
+        patchItem(ambienteId, itemId, { estado, status: estado })
+        return
+      }
       const { data, error } = await supabase
         .from('vistoria_itens')
-        .update({ estado })
+        .update({ estado, status: estado })
         .eq('id', itemId)
         .select('*')
         .single()
-      if (error) throw error
-      patchItem(ambienteId, itemId, data)
+      if (error) {
+        console.error('[useVistoriaExecucao] Erro do Supabase ao salvar estado do item:', error.message, error)
+        patchItem(ambienteId, itemId, { estado, status: estado, _naoSincronizado: true })
+        return
+      }
+      patchItem(ambienteId, itemId, { ...data, _naoSincronizado: false })
     },
     [patchItem]
   )
 
   const updateItemObservacao = useCallback(
     async (ambienteId, itemId, observacao) => {
+      if (isLocalId(itemId)) {
+        patchItem(ambienteId, itemId, { observacao })
+        return
+      }
       const { data, error } = await supabase
         .from('vistoria_itens')
         .update({ observacao })
         .eq('id', itemId)
         .select('*')
         .single()
-      if (error) throw error
-      patchItem(ambienteId, itemId, data)
+      if (error) {
+        console.error('[useVistoriaExecucao] Erro do Supabase ao salvar observação:', error.message, error)
+        patchItem(ambienteId, itemId, { observacao, _naoSincronizado: true })
+        return
+      }
+      patchItem(ambienteId, itemId, { ...data, _naoSincronizado: false })
     },
     [patchItem]
   )
 
+  // Fotos exigem um arquivo de verdade enviado ao Storage — não há
+  // como "fingir" localmente um upload que nunca aconteceu, então
+  // aqui o erro continua sendo lançado (o FotoUploader já mostra a
+  // mensagem inline) em vez de fabricar uma foto que não existe.
   const addFotoItem = useCallback(
     async (ambienteId, itemId, file) => {
       const path = `${vistoriaId}/${ambienteId}/${itemId}/${Date.now()}-${file.name}`
       const { error: upErr } = await supabase.storage.from(FOTOS_BUCKET).upload(path, file)
-      if (upErr) throw upErr
+      if (upErr) {
+        console.error('[useVistoriaExecucao] Erro do Supabase ao enviar foto:', upErr.message, upErr)
+        throw upErr
+      }
 
       const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
 
@@ -268,7 +384,10 @@ export function useVistoriaExecucao(vistoriaId) {
         .insert({ ambiente_id: ambienteId, item_id: itemId, url: pub.publicUrl })
         .select()
         .single()
-      if (error) throw error
+      if (error) {
+        console.error('[useVistoriaExecucao] Erro do Supabase ao salvar registro da foto:', error.message, error)
+        throw error
+      }
 
       setAmbientes((prev) =>
         prev.map((a) =>
@@ -289,7 +408,9 @@ export function useVistoriaExecucao(vistoriaId) {
 
   const removeFotoItem = useCallback(async (ambienteId, itemId, fotoId) => {
     const { error } = await supabase.from('vistoria_fotos').delete().eq('id', fotoId)
-    if (error) throw error
+    if (error) {
+      console.error('[useVistoriaExecucao] Erro do Supabase ao remover foto:', error.message, error)
+    }
     setAmbientes((prev) =>
       prev.map((a) =>
         a.id === ambienteId

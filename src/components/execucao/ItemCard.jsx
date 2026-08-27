@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { AlertTriangle, X } from 'lucide-react'
 import ItemEstadoSelector from './ItemEstadoSelector'
 import FotoUploader from './FotoUploader'
 import { getEstadoItemMeta } from '../../lib/vistoriaExecucao'
@@ -14,12 +14,23 @@ export default function ItemCard({
   onRemoveItem
 }) {
   const [observacaoLocal, setObservacaoLocal] = useState(item.observacao || '')
+  const nomeItem = item.item || item.nome || 'Item'
   const estadoMeta = getEstadoItemMeta(item.estado)
 
   return (
     <div className="card space-y-3 p-4">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-bold text-brand-900">{item.item}</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="text-sm font-bold text-brand-900">{nomeItem}</p>
+          {item._naoSincronizado && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600"
+              title="Ainda não confirmado no servidor — continue trabalhando, tentaremos de novo quando a conexão voltar."
+            >
+              <AlertTriangle size={10} /> não sincronizado
+            </span>
+          )}
+        </div>
         {!readOnly && onRemoveItem && (
           <button
             type="button"
@@ -73,7 +84,7 @@ export default function ItemCard({
               <img
                 key={foto.id}
                 src={foto.url}
-                alt={`Foto de ${item.item}`}
+                alt={`Foto de ${nomeItem}`}
                 className="h-16 w-16 rounded-lg border border-brand-border object-cover"
               />
             ))}

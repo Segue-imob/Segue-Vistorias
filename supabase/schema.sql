@@ -463,3 +463,18 @@ alter table public.vistorias add column if not exists laudo_preenchido jsonb;
 drop policy if exists "Leitura publica de vistoria-fotos" on storage.objects;
 drop policy if exists "Autenticados enviam para vistoria-fotos" on storage.objects;
 drop policy if exists "Autenticados removem de vistoria-fotos" on storage.objects;
+
+-- ============================================================
+-- Colunas redundantes para tolerância a nomes alternativos: o
+-- front-end agora grava o nome do ambiente/item e o estado em DUAS
+-- colunas cada (ambiente+nome, item+nome, estado+status), para
+-- funcionar tanto em bancos que usam um nome quanto o outro. Isso é
+-- redundância deliberada (as duas colunas do mesmo par sempre têm o
+-- mesmo valor) — não é a forma mais limpa de modelar o dado, mas é
+-- o que garante compatibilidade caso seu projeto tenha sido ajustado
+-- manualmente com nomes de coluna diferentes dos originais.
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+alter table public.vistoria_ambientes add column if not exists nome text;
+alter table public.vistoria_itens add column if not exists nome text;
+alter table public.vistoria_itens add column if not exists status text;

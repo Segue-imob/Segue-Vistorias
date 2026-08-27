@@ -68,6 +68,12 @@ O fluxo de campo do Vistoriador é uma navegação em **2 níveis**:
 - **Nível 1 — Ambientes**: cards com o nome do ambiente, barra de progresso e "X/Y itens avaliados", botão **Vistoriar Ambiente**. O seletor "+ Adicionar" ambiente (Sala, Cozinha, Quarto, Banheiro, Varanda ou "Outro" customizado) já carrega, na hora, os **12 itens padrão** como linhas reais no banco — é por isso que o card nasce mostrando "0/12" mesmo antes de entrar nele.
 - **Nível 2 — Itens do ambiente**: ao tocar em "Vistoriar Ambiente", a tela troca para a lista de itens daquele ambiente (Piso, Rodapé, Parede, Teto, Porta, Janela, Interruptores e Tomadas, Luminária, Armário, Bancada da Pia, Torneira, Tanque), cada um com seletor de estado (`Bom`/`Regular`/`Avariado`/`Ausente`), campo de observação e upload de foto **por item** (não mais por ambiente). O botão **+ Adicionar Outro Item** cria itens personalizados na hora. **← Voltar para Lista de Ambientes** retorna ao Nível 1.
 
+### Resiliência a nomes de coluna alternativos
+
+`useVistoriaExecucao.js` grava o nome do ambiente/item e o estado em **duas colunas cada** — `ambiente`+`nome` (em `vistoria_ambientes`), `item`+`nome` e `estado`+`status` (em `vistoria_itens`) — para funcionar mesmo que seu banco use um nome de coluna diferente do outro. Isso é redundância deliberada (as duas colunas do par sempre recebem o mesmo valor); `schema.sql` já cria as colunas extras. Se algum `insert`/`update` falhar mesmo assim (sem internet em campo, coluna realmente ausente, etc.), a mensagem exata do Supabase vai pro `console.error` e o ambiente/item aparece na tela com um selo **"não sincronizado"** — a interface não trava, mas esses itens só existem localmente até a próxima gravação bem-sucedida (não sobrevivem a um recarregamento de página).
+
+**Importante — o que eu não implementei de propósito**: itens novos (padrão ou personalizados) sempre nascem com estado `null` ("não avaliado"), nunca pré-preenchidos como "Bom". Preencher automaticamente um item como "em bom estado" antes do vistoriador sequer olhar pra ele forjaria dado num documento que pode virar base de laudo ou disputa de caução — isso é uma escolha de integridade dos dados, não uma lacuna técnica.
+
 Tabelas envolvidas — rode novamente `supabase/schema.sql` (é idempotente) para aplicar:
 
 - `vistoria_ambientes` — um ambiente vistoriado (`vistoria_id`, `ambiente`).
