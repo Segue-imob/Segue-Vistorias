@@ -13,7 +13,8 @@ export default function ItemCard({
   onUpdateObservacao,
   onUploadFoto,
   onRemoveFoto,
-  onRemoveItem
+  onRemoveItem,
+  onOpenFoto
 }) {
   const [observacaoLocal, setObservacaoLocal] = useState(item.observacao || '')
   const nomeItem = item.item || item.nome || 'Item'
@@ -100,16 +101,24 @@ export default function ItemCard({
               <p className="text-xs text-slate-400">Nenhuma foto anexada.</p>
             )}
             {(item.vistoria_fotos || []).map((foto) => (
-              <img
+              <button
                 key={foto.id}
-                src={foto.url}
-                alt={`Foto de ${nomeItem}`}
-                className="h-16 w-16 rounded-lg border border-brand-border object-cover"
-              />
+                type="button"
+                onClick={() => onOpenFoto(foto)}
+                className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-brand-border"
+                title="Ver foto ampliada"
+              >
+                <img src={foto.url} alt={`Foto de ${nomeItem}`} className="h-full w-full object-cover" />
+              </button>
             ))}
           </div>
         ) : (
-          <FotoUploader fotos={item.vistoria_fotos || []} onUpload={onUploadFoto} onRemove={onRemoveFoto} />
+          <FotoUploader
+            fotos={item.vistoria_fotos || []}
+            onUpload={onUploadFoto}
+            onRemove={onRemoveFoto}
+            onOpenFoto={onOpenFoto}
+          />
         )}
       </div>
     </div>

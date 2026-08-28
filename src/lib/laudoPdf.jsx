@@ -403,12 +403,20 @@ function Cabecalho({ vistoria, totalFotos }) {
 }
 
 function InformacoesImovel({ vistoria }) {
+  // Exibição estritamente condicional: só entra na lista (e portanto
+  // só aparece no laudo) o campo que o vistoriador de fato preencheu
+  // — nada de badge com "—" pra campo em branco. Se os quatro
+  // estiverem vazios, a seção inteira some (nada pra mostrar).
   const badges = [
-    { rotulo: 'ESTADO DE LIMPEZA', valor: getLabelOpcao(ESTADO_LIMPEZA_OPCOES, vistoria.estado_limpeza) },
-    { rotulo: 'ENERGIA', valor: getLabelOpcao(ENERGIA_OPCOES, vistoria.energia) },
-    { rotulo: 'ÁGUA', valor: getLabelOpcao(AGUA_OPCOES, vistoria.agua) },
-    { rotulo: 'GÁS', valor: getLabelOpcao(GAS_OPCOES, vistoria.gas) }
+    { rotulo: 'ESTADO DE LIMPEZA', bruto: vistoria.estado_limpeza, opcoes: ESTADO_LIMPEZA_OPCOES },
+    { rotulo: 'ENERGIA', bruto: vistoria.energia, opcoes: ENERGIA_OPCOES },
+    { rotulo: 'ÁGUA', bruto: vistoria.agua, opcoes: AGUA_OPCOES },
+    { rotulo: 'GÁS', bruto: vistoria.gas, opcoes: GAS_OPCOES }
   ]
+    .filter((campo) => campo.bruto)
+    .map((campo) => ({ rotulo: campo.rotulo, valor: getLabelOpcao(campo.opcoes, campo.bruto) }))
+
+  if (badges.length === 0) return null
 
   return (
     <View style={styles.infoImovelWrap} wrap={false}>

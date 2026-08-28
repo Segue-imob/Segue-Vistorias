@@ -8,8 +8,10 @@ import AmbienteSummaryCard from '../components/execucao/AmbienteSummaryCard'
 import ItemCard from '../components/execucao/ItemCard'
 import InformacoesGeraisCard from '../components/execucao/InformacoesGeraisCard'
 import FinalizarVistoriaModal from '../components/execucao/FinalizarVistoriaModal'
+import PhotoLightbox from '../components/execucao/PhotoLightbox'
+import ConfirmDialog from '../components/ConfirmDialog'
 import StatusBadge from '../components/StatusBadge'
-import { AMBIENTES_PADRAO, buildMapsUrl } from '../lib/vistoriaExecucao'
+import { AMBIENTES_PADRAO, buildMapsUrl, montarNomeArquivoLaudo } from '../lib/vistoriaExecucao'
 import { gerarLaudoPdfBlob } from '../lib/laudoPdf'
 
 export default function VistoriaExecucao() {
@@ -53,10 +55,43 @@ export default function VistoriaExecucao() {
   const [pdfErrorMsg, setPdfErrorMsg] = useState('')
   const [infoGeralError, setInfoGeralError] = useState('')
 
+  // Lightbox global de fotos — navega por TODAS as fotos da vistoria
+  // (não só as de um item), por isso mora aqui no topo, não dentro do
+  // FotoUploader de cada item.
+  const [fotoAmpliadaId, setFotoAmpliadaId] = useState(null)
+  const [fotoParaExcluirGlobal, setFotoParaExcluirGlobal] = useState(null)
+
   const activeAmbiente = useMemo(
     () => ambientes.find((a) => a.id === activeAmbienteId) || null,
     [ambientes, activeAmbienteId]
   )
+
+  // Lista achatada, em ordem, de todas as fotos de todos os
+  // ambientes/itens — cada foto carrega de onde veio (ambienteId,
+  // itemId, nomes) pra navegação e remoção funcionarem sem precisar
+  // fechar e reabrir o modal.
+  const todasFotos = useMemo(() => {
+    const lista = []
+    ambientes.forEach((amb) => {
+      const nomeAmbiente = amb.ambiente || amb.nome
+      ;(amb.vistoria_itens || []).forEach((item) => {
+        const nomeItem = item.item || item.nome
+        ;(item.vistoria_fotos || []).forEach((foto) => {
+          lista.push({
+            ...foto,
+            ambienteId: amb.id,
+            itemId: item.id,
+            ambienteNome: nomeAmbiente,
+            itemNome: nomeItem
+          })
+        })
+      })
+    })
+    return lista
+  }, [ambientes])
+
+  const indiceFotoAmpliada = todasFotos.findIndex((f) => f.id === fotoAmpliadaId)
+  const fotoAmpliada = indiceFotoAmpliada >= 0 ? todasFotos[indiceFotoAmpliada] : null
 
   if (loading) {
     return (
@@ -146,13 +181,14 @@ export default function VistoriaExecucao() {
     }
   }
 
-  const handleGerarLaudo = async () => {    setGerandoPdf(true)
+  const handleGerarLaudo = async () => {
+    setGerandoPdf(true)
     setPdfErrorMsg('')
     try {
       const blob = await gerarLaudoPdfBlob(vistoria, ambientes)
 
       // Dispara o download direto no dispositivo do vistoriador.
-      const nomeArquivo = `laudo-${vistoria.imoveis?.codigo_imovel || 'vistoria'}.pdf`
+      const nomeArquivo = montarNomeArquivoLaudo(vistoria)
       const urlObjeto = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = urlObjeto
@@ -172,6 +208,27 @@ export default function VistoriaExecucao() {
     } finally {
       setGerandoPdf(false)
     }
+  }
+
+  // ---- Lightbox global de fotos ----
+  const handleAbrirFoto = (foto) => setFotoAmpliadaId(foto.id)
+  const handleFecharLightbox = () => setFotoAmpliadaId(null)
+  const handleFotoAnterior = () => {
+    if (indiceFotoAmpliada > 0) setFotoAmpliadaId(todasFotos[indiceFotoAmpliada - 1].id)
+  }
+  const handleFotoProxima = () => {
+    if (indiceFotoAmpliada >= 0 && indiceFotoAmpliada < todasFotos.length - 1) {
+      setFotoAmpliadaId(todasFotos[indiceFotoAmpliada + 1].id)
+    }
+  }
+  const handlePedirRemocaoGlobal = () => {
+    if (!fotoAmpliada) return
+    setFotoAmpliadaId(null)
+    setFotoParaExcluirGlobal(fotoAmpliada)
+  }
+  const handleConfirmarRemocaoGlobal = async () => {
+    if (!fotoParaExcluirGlobal) return
+    await removeFotoItem(fotoParaExcluirGlobal.ambienteId, fotoParaExcluirGlobal.itemId, fotoParaExcluirGlobal.id)
   }
 
   return (
@@ -221,6 +278,7 @@ export default function VistoriaExecucao() {
                 onUploadFoto={(file) => addFotoItem(activeAmbiente.id, item.id, file)}
                 onRemoveFoto={(fotoId) => removeFotoItem(activeAmbiente.id, item.id, fotoId)}
                 onRemoveItem={() => removeItem(activeAmbiente.id, item.id)}
+                onOpenFoto={handleAbrirFoto}
               />
             ))}
           </div>
@@ -375,6 +433,29 @@ export default function VistoriaExecucao() {
         onClose={() => setFinalizarOpen(false)}
         ambientes={ambientes}
         onConfirm={handleFinalizarConfirm}
+      />
+
+      <PhotoLightbox
+        open={Boolean(fotoAmpliada)}
+        foto={fotoAmpliada}
+        onClose={handleFecharLightbox}
+        onPrev={handleFotoAnterior}
+        onNext={handleFotoProxima}
+        hasPrev={indiceFotoAmpliada > 0}
+        hasNext={indiceFotoAmpliada >= 0 && indiceFotoAmpliada < todasFotos.length - 1}
+        indice={indiceFotoAmpliada}
+        total={todasFotos.length}
+        onDelete={isEncerrada ? undefined : handlePedirRemocaoGlobal}
+      />
+
+      <ConfirmDialog
+        open={Boolean(fotoParaExcluirGlobal)}
+        onClose={() => setFotoParaExcluirGlobal(null)}
+        title="Remover foto"
+        description="Deseja excluir esta foto?"
+        confirmLabel="Excluir foto"
+        danger
+        onConfirm={handleConfirmarRemocaoGlobal}
       />
     </div>
   )

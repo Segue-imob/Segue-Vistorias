@@ -117,3 +117,35 @@ export function buildMapsUrl(imovel) {
   if (partes.length === 0) return null
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(partes.join(', '))}`
 }
+
+function removerAcentos(texto) {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
+/** Remove caracteres inválidos em nome de arquivo em qualquer sistema operacional. */
+function sanitizarNomeArquivo(texto) {
+  return texto.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Monta o nome do arquivo do laudo: "Vistoria {Tipo} - CI {Código} -
+ * {Nome do Edifício}.pdf" (ex.: "Vistoria Saida - CI 99 - Ed.
+ * Nautilus.pdf"). Sem acento de propósito (bate com o exemplo dado:
+ * "Saida", não "Saída") — evita problemas de nome de arquivo em
+ * downloads/anexos de e-mail em alguns sistemas.
+ *
+ * IMPORTANTE: não existe uma coluna própria de "nome do edifício" em
+ * `imoveis` (só `endereco`, `bairro`, `cidade`, `codigo_imovel`) — o
+ * endereço completo é usado no lugar. Se quiser o nome curto do
+ * prédio (tipo "Ed. Nautilus") de verdade no nome do arquivo, é
+ * preciso cadastrar isso em algum campo próprio.
+ */
+export function montarNomeArquivoLaudo(vistoria) {
+  const imovel = vistoria?.imoveis || {}
+  const tipo = vistoria?.tipo || 'Vistoria'
+  const codigo = imovel.codigo_imovel || '—'
+  const nomeImovel = imovel.endereco || 'Imóvel'
+
+  const nome = `Vistoria ${tipo} - CI ${codigo} - ${nomeImovel}`
+  return `${sanitizarNomeArquivo(removerAcentos(nome))}.pdf`
+}

@@ -156,12 +156,17 @@ Ao clicar em "Imprimir / Baixar Laudo PDF" (visível só quando a vistoria está
 
 
 
-Tocar em qualquer miniatura do checklist abre `PhotoLightbox` (novo componente) — foto ampliada em tela cheia (`object-contain`, sem cortar), botão **✕ Fechar** no topo, clique fora da imagem também fecha (o clique na própria foto não propaga, só a área ao redor), e rodapé com a data/hora de envio (`foto.created_at`, formatada em pt-BR).
+### Galeria de fotos: navegação global, nome do PDF e campos condicionais
 
-Remover uma foto — pelo **✕** discreto no canto da miniatura ou pelo botão "Remover foto" dentro do lightbox (que fecha o lightbox e abre a confirmação por cima) — sempre passa por `ConfirmDialog` com "Deseja excluir esta foto?" antes de executar de verdade. Ao confirmar, `removeFotoItem` (no hook):
-- Apaga a linha em `vistoria_fotos` (pulando essa chamada se a foto nunca chegou a ser registrada lá — ver `_naoSincronizado`);
-- Remove a URL do array `vistoria_itens.fotos_urls`, mantendo os dois lugares em sincronia;
-- Atualiza o estado local na hora — o contador "X/30" reflete a contagem nova automaticamente, já que é derivado direto do tamanho do array de fotos.
+**Lightbox com navegação entre todas as fotos da vistoria**: tocar em qualquer miniatura do checklist (edição ou somente leitura) abre `PhotoLightbox` — mas agora é uma **instância única, hospedada em `VistoriaExecucao.jsx`**, não mais uma por item. `todasFotos` é uma lista achatada (via `useMemo`) com todas as fotos de todos os ambientes/itens da vistoria, em ordem, cada uma carregando `ambienteId`/`itemId`/`ambienteNome`/`itemNome`. Isso permite:
+- **✕ Fechar** no topo (inalterado) e clique fora da imagem também fecha.
+- **❮ Anterior / Próxima ❯**: setas nas laterais (e `←`/`→` do teclado) navegam por **todas** as fotos da vistoria sem fechar o modal, cruzando de um item/ambiente pro próximo automaticamente. As setas só aparecem quando há pra onde ir (primeira foto não mostra "anterior", última não mostra "próxima"). O cabeçalho mostra o ambiente/item de origem da foto atual e a posição ("3 de 12").
+- **Remover foto**: continua existindo dentro do lightbox, mas só quando a vistoria **não** está encerrada (`isEncerrada` controla isso globalmente agora, em vez de cada `FotoUploader` decidir por conta própria) — abre a mesma confirmação de sempre, e a remoção é roteada pro `removeFotoItem(ambienteId, itemId, fotoId)` certo usando os dados que a própria foto carrega na lista achatada.
+- A remoção rápida pelo **✕** discreto no canto da miniatura continua local em `FotoUploader` (não precisa de navegação, então não subiu pro nível global). Em qualquer um dos dois caminhos (✕ discreto ou "Remover foto" no lightbox), `removeFotoItem` apaga a linha em `vistoria_fotos`, remove a URL do array `vistoria_itens.fotos_urls` (mantendo os dois em sincronia) e atualiza o estado local na hora — o contador "X/30" reflete a contagem nova automaticamente.
+
+**Nome automático do arquivo do laudo**: `montarNomeArquivoLaudo()` (`src/lib/vistoriaExecucao.js`) monta `"Vistoria {Tipo} - CI {Código} - {Endereço}.pdf"` sem acentos (ex.: "Saída" vira "Saida", batendo com o exemplo pedido) e sem caracteres inválidos de nome de arquivo. **Atenção**: não existe uma coluna própria de "nome do edifício" em `imoveis` (só `endereco`, `bairro`, `cidade`, `codigo_imovel`) — o endereço completo é usado no lugar de "Ed. Nautilus" no exemplo. Se quiser o nome curto do prédio de verdade no arquivo, é preciso cadastrar isso em algum campo próprio (posso adicionar se quiser).
+
+**Exibição estritamente condicional**: `Funcionamento` e `Observações` já só apareciam no laudo quando preenchidos (isso já valia desde a introdução da lista por item). O que estava faltando: a caixa "Informações do Imóvel" — agora `InformacoesImovel` filtra os 4 campos (Limpeza/Energia/Água/Gás) e só mostra badge pro que o vistoriador de fato preencheu (nada de badge com "—"); se os quatro estiverem vazios, a seção inteira some do laudo.
 
 ### Tratamento das fotos antes do upload (marca d'água, redimensionamento e compressão)
 
