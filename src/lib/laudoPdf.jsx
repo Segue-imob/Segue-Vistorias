@@ -3,8 +3,11 @@
 // servidor), via @react-pdf/renderer. Estrutura baseada num modelo de
 // laudo real de mercado, adaptada à identidade e aos dados da SEGUE
 // Vistorias:
-//   1. Cabeçalho com marca + quadro de dados do imóvel/vistoria
-//   2. Caixa "Informações do Imóvel" (limpeza, energia, água, gás)
+//   1. Cabeçalho com marca, endereço em destaque, dados gerais em
+//      cards de fundo suave (sem tabela de bordas rígidas) e o total
+//      de fotos ao lado do vistoriador responsável
+//   2. Caixa "Informações do Imóvel" — linha de tags/badges com fundo
+//      suave (limpeza, energia, água, gás), também sem borda pesada
 //   3. Introdução + legenda dos parâmetros de condição (Ótimo/Bom/
 //      Regular/Ruim), com as cores oficiais de cada um
 //   4. Resumo executivo (progresso + condições gerais)
@@ -88,28 +91,28 @@ const styles = StyleSheet.create({
   laudoTitulo: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: CORES.brand900 },
   laudoCodigo: { fontSize: 8, color: CORES.brand700, marginTop: 1 },
 
-  // ---- Quadro de informações do imóvel/vistoria ----
-  infoBox: {
-    borderWidth: 1,
-    borderColor: CORES.border,
-    borderRadius: 3,
+  // ---- Dados gerais (endereço, tipo, datas, vistoriador) — sem
+  // tabela rígida: endereço em destaque + cards de fundo suave ----
+  enderecoLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 2 },
+  enderecoDestaque: { fontSize: 12.5, fontFamily: 'Helvetica-Bold', color: CORES.brand900, marginBottom: 12 },
+  dadosGrid: { flexDirection: 'row', marginBottom: 8 },
+  dadosCard: { flex: 1, backgroundColor: CORES.cream, borderRadius: 4, padding: 8, marginRight: 8 },
+  dadosCardLast: { marginRight: 0 },
+  dadosLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 2, letterSpacing: 0.3 },
+  dadosValor: { fontSize: 9, color: CORES.brand900 },
+  vistoriadorRow: {
+    flexDirection: 'row',
+    backgroundColor: CORES.cream,
+    borderRadius: 4,
+    padding: 8,
     marginBottom: 14
   },
-  infoRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: CORES.border },
-  infoRowLast: { borderBottomWidth: 0 },
-  infoCell: { flex: 1, padding: 6, borderRightWidth: 1, borderRightColor: CORES.border },
-  infoCellLast: { borderRightWidth: 0 },
-  infoLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 2 },
-  infoValue: { fontSize: 9, color: CORES.brand900 },
+  vistoriadorCell: { flex: 1 },
+  vistoriadorDivider: { width: 1, backgroundColor: CORES.border, marginHorizontal: 12 },
 
-  // ---- Caixa "Informações do Imóvel" (limpeza/energia/água/gás) ----
-  infoImovelBox: {
-    borderWidth: 1,
-    borderColor: CORES.border,
-    borderRadius: 3,
-    marginBottom: 14,
-    padding: 8
-  },
+  // ---- Caixa "Informações do Imóvel" — linha de tags/badges com
+  // fundo suave, sem borda pesada de tabela ----
+  infoImovelWrap: { marginBottom: 14 },
   infoImovelTitulo: {
     fontSize: 8,
     fontFamily: 'Helvetica-Bold',
@@ -117,9 +120,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     letterSpacing: 0.5
   },
-  infoImovelRow: { flexDirection: 'row' },
-  infoImovelCell: { flex: 1, paddingRight: 10, borderRightWidth: 1, borderRightColor: CORES.border },
-  infoImovelCellLast: { borderRightWidth: 0, paddingRight: 0 },
+  infoImovelBadgesRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  infoImovelBadge: {
+    backgroundColor: CORES.cream,
+    borderRadius: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginRight: 8,
+    marginBottom: 6
+  },
+  infoImovelBadgeLabel: { fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 1 },
+  infoImovelBadgeValor: { fontSize: 8.5, color: CORES.brand900 },
 
   // ---- Introdução + legenda de condição ----
   introTexto: { fontSize: 8.5, color: CORES.brand900, lineHeight: 1.5, marginBottom: 10, textAlign: 'justify' },
@@ -334,7 +345,7 @@ async function prepararDadosParaPdf(vistoria, ambientes) {
   }
 }
 
-function Cabecalho({ vistoria }) {
+function Cabecalho({ vistoria, totalFotos }) {
   const imovel = vistoria.imoveis || {}
   const endereco = [imovel.endereco, imovel.bairro, imovel.cidade].filter(Boolean).join(', ')
 
@@ -356,32 +367,35 @@ function Cabecalho({ vistoria }) {
         </View>
       </View>
 
-      <View style={styles.infoBox}>
-        <View style={styles.infoRow}>
-          <View style={[styles.infoCell, { flex: 2 }]}>
-            <Text style={styles.infoLabel}>ENDEREÇO COMPLETO</Text>
-            <Text style={styles.infoValue}>{endereco || '—'}</Text>
-          </View>
-          <View style={[styles.infoCell, styles.infoCellLast]}>
-            <Text style={styles.infoLabel}>TIPO DE VISTORIA</Text>
-            <Text style={styles.infoValue}>{vistoria.tipo || '—'}</Text>
-          </View>
+      <Text style={styles.enderecoLabel}>ENDEREÇO COMPLETO</Text>
+      <Text style={styles.enderecoDestaque}>{endereco || '—'}</Text>
+
+      <View style={styles.dadosGrid}>
+        <View style={styles.dadosCard}>
+          <Text style={styles.dadosLabel}>TIPO DE VISTORIA</Text>
+          <Text style={styles.dadosValor}>{vistoria.tipo || '—'}</Text>
         </View>
-        <View style={styles.infoRow}>
-          <View style={styles.infoCell}>
-            <Text style={styles.infoLabel}>DATA/HORA DE INÍCIO</Text>
-            <Text style={styles.infoValue}>{formatarData(vistoria.data_agendamento)}</Text>
-          </View>
-          <View style={[styles.infoCell, styles.infoCellLast]}>
-            <Text style={styles.infoLabel}>DATA/HORA DE FINALIZAÇÃO</Text>
-            <Text style={styles.infoValue}>{formatarData(vistoria.finalizada_em || vistoria.concluida_em)}</Text>
-          </View>
+        <View style={styles.dadosCard}>
+          <Text style={styles.dadosLabel}>DATA/HORA DE INÍCIO</Text>
+          <Text style={styles.dadosValor}>{formatarData(vistoria.data_agendamento)}</Text>
         </View>
-        <View style={[styles.infoRow, styles.infoRowLast]}>
-          <View style={[styles.infoCell, styles.infoCellLast, { flex: 1 }]}>
-            <Text style={styles.infoLabel}>VISTORIADOR RESPONSÁVEL</Text>
-            <Text style={styles.infoValue}>{vistoria.vistoriador?.nome || '—'}</Text>
-          </View>
+        <View style={[styles.dadosCard, styles.dadosCardLast]}>
+          <Text style={styles.dadosLabel}>DATA/HORA DE FINALIZAÇÃO</Text>
+          <Text style={styles.dadosValor}>{formatarData(vistoria.finalizada_em || vistoria.concluida_em)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.vistoriadorRow}>
+        <View style={styles.vistoriadorCell}>
+          <Text style={styles.dadosLabel}>VISTORIADOR RESPONSÁVEL</Text>
+          <Text style={styles.dadosValor}>{vistoria.vistoriador?.nome || '—'}</Text>
+        </View>
+        <View style={styles.vistoriadorDivider} />
+        <View style={styles.vistoriadorCell}>
+          <Text style={styles.dadosLabel}>TOTAL DE FOTOS</Text>
+          <Text style={styles.dadosValor}>
+            {totalFotos} foto{totalFotos === 1 ? '' : 's'}
+          </Text>
         </View>
       </View>
     </>
@@ -389,26 +403,23 @@ function Cabecalho({ vistoria }) {
 }
 
 function InformacoesImovel({ vistoria }) {
+  const badges = [
+    { rotulo: 'ESTADO DE LIMPEZA', valor: getLabelOpcao(ESTADO_LIMPEZA_OPCOES, vistoria.estado_limpeza) },
+    { rotulo: 'ENERGIA', valor: getLabelOpcao(ENERGIA_OPCOES, vistoria.energia) },
+    { rotulo: 'ÁGUA', valor: getLabelOpcao(AGUA_OPCOES, vistoria.agua) },
+    { rotulo: 'GÁS', valor: getLabelOpcao(GAS_OPCOES, vistoria.gas) }
+  ]
+
   return (
-    <View style={styles.infoImovelBox} wrap={false}>
+    <View style={styles.infoImovelWrap} wrap={false}>
       <Text style={styles.infoImovelTitulo}>INFORMAÇÕES DO IMÓVEL</Text>
-      <View style={styles.infoImovelRow}>
-        <View style={styles.infoImovelCell}>
-          <Text style={styles.infoLabel}>ESTADO DE LIMPEZA</Text>
-          <Text style={styles.infoValue}>{getLabelOpcao(ESTADO_LIMPEZA_OPCOES, vistoria.estado_limpeza)}</Text>
-        </View>
-        <View style={styles.infoImovelCell}>
-          <Text style={styles.infoLabel}>ENERGIA</Text>
-          <Text style={styles.infoValue}>{getLabelOpcao(ENERGIA_OPCOES, vistoria.energia)}</Text>
-        </View>
-        <View style={styles.infoImovelCell}>
-          <Text style={styles.infoLabel}>ÁGUA</Text>
-          <Text style={styles.infoValue}>{getLabelOpcao(AGUA_OPCOES, vistoria.agua)}</Text>
-        </View>
-        <View style={[styles.infoImovelCell, styles.infoImovelCellLast]}>
-          <Text style={styles.infoLabel}>GÁS</Text>
-          <Text style={styles.infoValue}>{getLabelOpcao(GAS_OPCOES, vistoria.gas)}</Text>
-        </View>
+      <View style={styles.infoImovelBadgesRow}>
+        {badges.map((badge) => (
+          <View key={badge.rotulo} style={styles.infoImovelBadge}>
+            <Text style={styles.infoImovelBadgeLabel}>{badge.rotulo}</Text>
+            <Text style={styles.infoImovelBadgeValor}>{badge.valor}</Text>
+          </View>
+        ))}
       </View>
     </View>
   )
@@ -612,10 +623,20 @@ function LaudoDocument({ vistoria, ambientes }) {
     }))
     .filter((amb) => amb.vistoria_itens.length > 0)
 
+  // Total de fotos = soma de todas as imagens que de fato aparecem no
+  // corpo do laudo (ou seja, dos itens avaliados que sobraram depois
+  // do filtro acima) — não conta fotos de itens "Não avaliado", já
+  // que essas não aparecem em lugar nenhum do documento.
+  const totalFotos = ambientesParaLaudo.reduce(
+    (soma, amb) =>
+      soma + (amb.vistoria_itens || []).reduce((s, it) => s + (it._fotosParaPdf?.length || 0), 0),
+    0
+  )
+
   return (
     <Document title={`Laudo de vistoria — ${imovel.codigo_imovel || 'imóvel'}`}>
       <Page size="A4" style={styles.page} wrap>
-        <Cabecalho vistoria={vistoria} />
+        <Cabecalho vistoria={vistoria} totalFotos={totalFotos} />
         <InformacoesImovel vistoria={vistoria} />
         <Introducao />
         {/* Resumo executivo continua contando TODOS os itens (avaliados
