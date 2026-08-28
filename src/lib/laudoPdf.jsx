@@ -8,8 +8,14 @@
 //   3. Introdução + legenda dos parâmetros de condição (Ótimo/Bom/
 //      Regular/Ruim), com as cores oficiais de cada um
 //   4. Resumo executivo (progresso + condições gerais)
-//   5. Detalhamento por ambiente: para cada item, nessa ordem exata —
-//      nome do item, linha de status (bolinha colorida de condição +
+//   5. Detalhamento por ambiente: numeração hierárquica sequencial
+//      ("1. Sala", "1.1 Piso", "1.2 Parede"...) — só ambientes com
+//      pelo menos um item avaliado aparecem, e dentro deles só os
+//      itens com condição efetivamente preenchida ("Não avaliado"
+//      nunca aparece no corpo do laudo; o Resumo Executivo é que
+//      continua contando tudo, avaliado ou não, pra mostrar
+//      progresso). Pra cada item, nessa ordem exata — título
+//      numerado, linha de status (bolinha colorida de condição +
 //      funcionamento + observação) e, logo em seguida, a grade com
 //      as fotos EXCLUSIVAS daquele item (até 3 por linha; item sem
 //      fotos não reserva espaço nenhum). Nada de galeria global ao
@@ -497,21 +503,27 @@ function ResumoExecutivo({ vistoria, ambientes }) {
   )
 }
 
-function AmbienteSecao({ ambiente }) {
+function AmbienteSecao({ ambiente, numero }) {
   const itens = ambiente.vistoria_itens || []
+  const nomeAmbiente = ambiente.ambiente || ambiente.nome
 
   return (
     <View>
-      <Text style={styles.ambienteTitulo}>{ambiente.ambiente || ambiente.nome}</Text>
+      <Text style={styles.ambienteTitulo}>
+        {numero}. {nomeAmbiente}
+      </Text>
 
-      {itens.map((item) => {
+      {itens.map((item, index) => {
         const meta = getEstadoItemMeta(item.estado)
         const nomeItem = item.item || item.nome || 'Item'
+        const numeroItem = `${numero}.${index + 1}`
         const fotosDoItem = item._fotosParaPdf || []
 
         return (
           <View key={item.id} style={styles.itemBlocoComFotos} wrap={false}>
-            <Text style={styles.itemNome}>{nomeItem}</Text>
+            <Text style={styles.itemNome}>
+              {numeroItem} {nomeItem}
+            </Text>
             <View style={styles.itemCondicaoRow}>
               <View style={[styles.itemDot, { backgroundColor: meta ? meta.color : CORES.border }]} />
               <Text style={styles.itemCondicaoTexto}>
@@ -584,18 +596,39 @@ function Encerramento({ vistoria }) {
 function LaudoDocument({ vistoria, ambientes }) {
   const imovel = vistoria.imoveis || {}
 
+  // Filtro estrito (item 1): só itens com condição efetivamente
+  // preenchida (estado != null) entram no corpo do laudo — "Não
+  // avaliado" nunca aparece no documento final. Ambientes que ficam
+  // sem nenhum item avaliado depois desse filtro somem da lista
+  // também, pra não sobrar um título de ambiente vazio. A numeração
+  // hierárquica (item 2) é calculada em cima dessa lista já
+  // filtrada, então nunca fica com buraco na sequência (ex.: não
+  // pula do "1." pro "3." se o "2." tiver sumido por falta de item
+  // avaliado).
+  const ambientesParaLaudo = ambientes
+    .map((amb) => ({
+      ...amb,
+      vistoria_itens: (amb.vistoria_itens || []).filter((it) => it.estado)
+    }))
+    .filter((amb) => amb.vistoria_itens.length > 0)
+
   return (
     <Document title={`Laudo de vistoria — ${imovel.codigo_imovel || 'imóvel'}`}>
       <Page size="A4" style={styles.page} wrap>
         <Cabecalho vistoria={vistoria} />
         <InformacoesImovel vistoria={vistoria} />
         <Introducao />
+        {/* Resumo executivo continua contando TODOS os itens (avaliados
+            ou não) — ele existe pra revelar progresso/pendências, então
+            filtrar aqui esconderia justamente o que ele deveria mostrar. */}
         <ResumoExecutivo vistoria={vistoria} ambientes={ambientes} />
 
-        {ambientes.length === 0 ? (
-          <Text>Nenhum ambiente registrado nesta vistoria.</Text>
+        {ambientesParaLaudo.length === 0 ? (
+          <Text>Nenhum item avaliado nesta vistoria até o momento.</Text>
         ) : (
-          ambientes.map((ambiente) => <AmbienteSecao key={ambiente.id} ambiente={ambiente} />)
+          ambientesParaLaudo.map((ambiente, index) => (
+            <AmbienteSecao key={ambiente.id} ambiente={ambiente} numero={index + 1} />
+          ))
         )}
 
         <Encerramento vistoria={vistoria} />
