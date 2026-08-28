@@ -8,13 +8,16 @@
 //   3. Introdução + legenda dos parâmetros de condição (Ótimo/Bom/
 //      Regular/Ruim), com as cores oficiais de cada um
 //   4. Resumo executivo (progresso + condições gerais)
-//   5. Detalhamento por ambiente (lista por item: nome + bolinha
-//      colorida de condição + funcionamento + observação em texto
-//      corrido — sem tabela)
-//   6. Galeria de fotos de cada ambiente, logo após a respectiva lista
-//      (as fotos já saem do upload com a marca d'água de data/hora
-//      queimada nos próprios pixels — ver src/lib/imageProcessing.js)
-//   7. Encerramento: observações finais, termo de responsabilidade e
+//   5. Detalhamento por ambiente: para cada item, nessa ordem exata —
+//      nome do item, linha de status (bolinha colorida de condição +
+//      funcionamento + observação) e, logo em seguida, a grade com
+//      as fotos EXCLUSIVAS daquele item (até 3 por linha; item sem
+//      fotos não reserva espaço nenhum). Nada de galeria global ao
+//      final do ambiente/documento — cada item carrega suas próprias
+//      fotos coladas nele. (Fotos já saem do upload com a marca
+//      d'água de data/hora queimada nos próprios pixels — ver
+//      src/lib/imageProcessing.js.)
+//   6. Encerramento: observações finais, termo de responsabilidade e
 //      assinatura digital com data de conclusão
 //
 // SOBRE AS FOTOS EM BRANCO: nossas fotos são comprimidas em WebP
@@ -146,7 +149,7 @@ const styles = StyleSheet.create({
   resumoNumero: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: CORES.brand900 },
   resumoLabel: { fontSize: 7, color: CORES.brand700, marginTop: 2, textAlign: 'center' },
 
-  // ---- Ambiente: título + lista de itens (texto corrido) ----
+  // ---- Ambiente: título + itens agrupados (item + status + fotos do item) ----
   ambienteTitulo: {
     fontSize: 11,
     fontFamily: 'Helvetica-Bold',
@@ -158,17 +161,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     borderRadius: 2
   },
-  itemBloco: { marginBottom: 7 },
+  itemBlocoComFotos: { marginBottom: 12 },
   itemNome: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: CORES.brand900, marginBottom: 2 },
   itemCondicaoRow: { flexDirection: 'row', alignItems: 'center' },
   itemDot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 5 },
   itemCondicaoTexto: { fontSize: 8.5, color: CORES.brand900 },
   itemObservacao: { fontSize: 8, color: CORES.brand700, marginTop: 2, marginLeft: 12, lineHeight: 1.4 },
 
-  // ---- Galeria de fotos ----
-  photosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 2, marginBottom: 12 },
+  // ---- Grade de fotos (até 3 por linha), agora exibida logo abaixo
+  // de cada item, com as fotos exclusivas daquele item ----
+  photosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 5 },
   photoBox: { width: 158, marginRight: 8, marginBottom: 8 },
-  photoLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 2 },
   photo: { width: 158, height: 118, objectFit: 'cover', borderRadius: 2, borderWidth: 1, borderColor: CORES.border },
   photoIndisponivel: {
     width: 158,
@@ -496,52 +499,53 @@ function ResumoExecutivo({ vistoria, ambientes }) {
 
 function AmbienteSecao({ ambiente }) {
   const itens = ambiente.vistoria_itens || []
-  const fotos = itens.flatMap((it) => (it._fotosParaPdf || []).map((foto) => ({ foto, item: it })))
 
   return (
     <View>
       <Text style={styles.ambienteTitulo}>{ambiente.ambiente || ambiente.nome}</Text>
 
-      <View style={{ marginBottom: 8 }}>
-        {itens.map((item) => {
-          const meta = getEstadoItemMeta(item.estado)
-          const nomeItem = item.item || item.nome || 'Item'
-          return (
-            <View key={item.id} style={styles.itemBloco} wrap={false}>
-              <Text style={styles.itemNome}>{nomeItem}</Text>
-              <View style={styles.itemCondicaoRow}>
-                <View style={[styles.itemDot, { backgroundColor: meta ? meta.color : CORES.border }]} />
-                <Text style={styles.itemCondicaoTexto}>
-                  {meta ? `Condição: ${meta.label}` : 'Não avaliado'}
-                  {item.funcionamento ? `   ·   Funcionamento: ${labelFuncionamento(item.funcionamento)}` : ''}
-                </Text>
-              </View>
-              {item.observacao && <Text style={styles.itemObservacao}>{item.observacao}</Text>}
-            </View>
-          )
-        })}
-      </View>
+      {itens.map((item) => {
+        const meta = getEstadoItemMeta(item.estado)
+        const nomeItem = item.item || item.nome || 'Item'
+        const fotosDoItem = item._fotosParaPdf || []
 
-      {fotos.length > 0 && (
-        <View style={styles.photosGrid}>
-          {fotos.map(({ foto, item }) => (
-            <View key={foto.id} style={styles.photoBox} wrap={false}>
-              <Text style={styles.photoLabel}>{item.item || item.nome}</Text>
-              {foto._pdfSrc ? (
-                <Link src={foto.url}>
-                  <Image src={foto._pdfSrc} style={styles.photo} />
-                </Link>
-              ) : (
-                <Link src={foto.url}>
-                  <View style={styles.photoIndisponivel}>
-                    <Text style={styles.photoIndisponivelTexto}>Foto indisponível — abrir original</Text>
-                  </View>
-                </Link>
-              )}
+        return (
+          <View key={item.id} style={styles.itemBlocoComFotos} wrap={false}>
+            <Text style={styles.itemNome}>{nomeItem}</Text>
+            <View style={styles.itemCondicaoRow}>
+              <View style={[styles.itemDot, { backgroundColor: meta ? meta.color : CORES.border }]} />
+              <Text style={styles.itemCondicaoTexto}>
+                {meta ? `Condição: ${meta.label}` : 'Não avaliado'}
+                {item.funcionamento ? `   ·   Funcionamento: ${labelFuncionamento(item.funcionamento)}` : ''}
+              </Text>
             </View>
-          ))}
-        </View>
-      )}
+            {item.observacao && <Text style={styles.itemObservacao}>{item.observacao}</Text>}
+
+            {/* Fotos EXCLUSIVAS deste item, logo em seguida — se não
+                houver nenhuma, só a descrição acima e segue pro
+                próximo item (sem grade vazia, sem espaço reservado). */}
+            {fotosDoItem.length > 0 && (
+              <View style={styles.photosGrid}>
+                {fotosDoItem.map((foto) => (
+                  <View key={foto.id} style={styles.photoBox} wrap={false}>
+                    {foto._pdfSrc ? (
+                      <Link src={foto.url}>
+                        <Image src={foto._pdfSrc} style={styles.photo} />
+                      </Link>
+                    ) : (
+                      <Link src={foto.url}>
+                        <View style={styles.photoIndisponivel}>
+                          <Text style={styles.photoIndisponivelTexto}>Foto indisponível — abrir original</Text>
+                        </View>
+                      </Link>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )
+      })}
     </View>
   )
 }
