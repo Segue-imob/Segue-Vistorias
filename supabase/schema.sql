@@ -529,3 +529,20 @@ create index if not exists idx_vistoria_fotos_vistoria on public.vistoria_fotos 
 alter table public.vistorias add column if not exists concluida_em timestamptz;
 alter table public.vistorias add column if not exists laudo_pdf_url text;
 alter table public.vistorias add column if not exists observacoes_finais text;
+
+-- ============================================================
+-- Informações Gerais do Imóvel (estado de limpeza, energia, água,
+-- gás) — campos da vistoria como um todo, preenchidos no topo da
+-- tela de execução e exibidos numa caixa própria no laudo em PDF,
+-- entre o cabeçalho e o Resumo Executivo.
+-- Sem CHECK de propósito: a validação de valores fica só no front
+-- (ESTADO_LIMPEZA_OPCOES/ENERGIA_OPCOES/AGUA_OPCOES/GAS_OPCOES em
+-- src/lib/vistoriaExecucao.js), pelo mesmo motivo já explicado na
+-- mudança de escala de condição do item — menos atrito a cada ajuste
+-- futuro de rótulo.
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+alter table public.vistorias add column if not exists estado_limpeza text;
+alter table public.vistorias add column if not exists energia text;
+alter table public.vistorias add column if not exists agua text;
+alter table public.vistorias add column if not exists gas text;

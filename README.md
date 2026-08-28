@@ -68,6 +68,17 @@ O fluxo de campo do Vistoriador é uma navegação em **2 níveis**:
 - **Nível 1 — Ambientes**: cards com o nome do ambiente, barra de progresso e "X/Y itens avaliados", botão **Vistoriar Ambiente**. O seletor "+ Adicionar" ambiente (Sala, Cozinha, Quarto, Banheiro, Varanda ou "Outro" customizado) já carrega, na hora, os **12 itens padrão** como linhas reais no banco — é por isso que o card nasce mostrando "0/12" mesmo antes de entrar nele.
 - **Nível 2 — Itens do ambiente**: ao tocar em "Vistoriar Ambiente", a tela troca para a lista de itens daquele ambiente (Piso, Rodapé, Parede, Teto, Porta, Janela, Interruptores e Tomadas, Luminária, Armário, Bancada da Pia, Torneira, Tanque), cada um com seletor de **Condição** (`Ótima`/`Boa`/`Regular`/`Ruim`), seletor de **Funcionamento** (`Sim`/`Não`, útil para eletros/eletrônicos), campo de observação e upload de foto **por item**, com limite de **30 fotos por item** (contador "X/30" sempre visível). O botão **+ Adicionar Outro Item** cria itens personalizados na hora. **← Voltar para Lista de Ambientes** retorna ao Nível 1.
 
+### Informações Gerais do Imóvel
+
+Card fixo no topo do Nível 1 (`InformacoesGeraisCard`, antes da lista de ambientes) — é sobre a vistoria como um todo, não sobre um ambiente específico, então fica fora da navegação em 2 níveis:
+
+- **Estado de Limpeza**: `Limpo` / `Empoeirado` / `Sujo`
+- **Energia Elétrica**: `Ligada` / `Desligada`
+- **Água**: `Ligada` / `Desligada`
+- **Gás**: `Ligado` / `Desligado`
+
+Cada seleção grava direto em `vistorias` (`updateInfoGeral(campo, valor)` no hook — um `UPDATE` de uma coluna só por vez, sem passar por ambiente/item) assim que tocada, sem precisar de um botão "salvar" separado. Vira somente leitura quando a vistoria está encerrada, igual ao resto do checklist. No laudo em PDF, esses quatro valores aparecem numa caixa própria "INFORMAÇÕES DO IMÓVEL", logo abaixo do cabeçalho e antes do Resumo Executivo.
+
 ### Câmera nativa (WebRTC) para as fotos do checklist
 
 O botão "Foto" de cada item abre `CameraCaptureModal` — câmera em tela cheia via `navigator.mediaDevices.getUserMedia`, não o seletor de arquivo do sistema:
@@ -176,7 +187,7 @@ Tabelas envolvidas — rode novamente `supabase/schema.sql` (é idempotente) par
 - `vistoria_ambientes` — um ambiente vistoriado (`vistoria_id`, `ambiente`, `nome`).
 - `vistoria_itens` — cada item de um ambiente (`ambiente_id`, `item`/`nome`, `estado`/`status` — opcional, `null` até ser avaliado, sem CHECK —, `funcionamento`, `observacao`, `fotos_urls` — array espelhando as URLs de `vistoria_fotos`). Não tem mais unicidade por nome: itens são linhas próprias, criadas de verdade ao adicionar o ambiente (os 12 padrão) ou via "+ Adicionar Outro Item".
 - `vistoria_fotos` — colunas: `ambiente_id` (obrigatório), `item_id`, `vistoria_id` e `foto_url` (espelha `url`) — payload completo enviado a cada insert, para retrocompatibilidade com diferentes nomes de coluna.
-- `vistorias` ganhou `assinatura_url`, `finalizada_em` e `laudo_preenchido` (jsonb) — este último recebe, **a cada alteração no checklist**, um snapshot JSON da estrutura completa (ambientes → itens → fotos), útil para consulta/exportação sem precisar recompor os joins. Essa sincronização roda em segundo plano (efeito colateral "melhor esforço": se falhar, só avisa no console, nunca trava a tela).
+- `vistorias` ganhou `assinatura_url`, `finalizada_em`, `laudo_preenchido` (jsonb) e, mais recentemente, `estado_limpeza`/`energia`/`agua`/`gas` (Informações Gerais do Imóvel — ver seção acima). `laudo_preenchido` recebe, **a cada alteração no checklist**, um snapshot JSON da estrutura completa (ambientes → itens → fotos), útil para consulta/exportação sem precisar recompor os joins. Essa sincronização roda em segundo plano (efeito colateral "melhor esforço": se falhar, só avisa no console, nunca trava a tela).
 
 ### "column vistorias.X does not exist" mesmo depois de rodar o `ALTER TABLE`
 

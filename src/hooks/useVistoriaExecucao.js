@@ -571,6 +571,24 @@ export function useVistoriaExecucao(vistoriaId) {
     [ambientes]
   )
 
+  /**
+   * Grava um campo de "Informações Gerais do Imóvel" (estado_limpeza,
+   * energia, agua ou gas) direto em `vistorias`. São campos da
+   * vistoria como um todo, não de um ambiente/item — por isso vivem
+   * direto no hook, sem passar por ambienteId/itemId.
+   */
+  const updateInfoGeral = useCallback(
+    async (campo, valor) => {
+      const { error } = await supabase.from('vistorias').update({ [campo]: valor }).eq('id', vistoriaId)
+      if (error) {
+        console.error(`[useVistoriaExecucao] Erro do Supabase ao salvar ${campo}:`, error.message, error)
+        throw error
+      }
+      setVistoria((v) => (v ? { ...v, [campo]: valor } : v))
+    },
+    [vistoriaId]
+  )
+
   const aceitarVistoria = useCallback(async () => {
     const { error } = await supabase.from('vistorias').update({ status: 'aceita' }).eq('id', vistoriaId)
     if (error) throw error
@@ -682,6 +700,7 @@ export function useVistoriaExecucao(vistoriaId) {
     removeFotoItem,
     aceitarVistoria,
     finalizarVistoria,
-    salvarLaudoPdf
+    salvarLaudoPdf,
+    updateInfoGeral
   }
 }

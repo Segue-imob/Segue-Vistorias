@@ -28,7 +28,15 @@
 import { Document, Page, Text, View, Image, Link, StyleSheet, pdf } from '@react-pdf/renderer'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ESTADOS_ITEM_ORDER, getEstadoItemMeta } from './vistoriaExecucao'
+import {
+  AGUA_OPCOES,
+  ENERGIA_OPCOES,
+  ESTADO_LIMPEZA_OPCOES,
+  ESTADOS_ITEM_ORDER,
+  GAS_OPCOES,
+  getEstadoItemMeta,
+  getLabelOpcao
+} from './vistoriaExecucao'
 
 const CORES = {
   accent: '#a64324',
@@ -81,6 +89,25 @@ const styles = StyleSheet.create({
   infoCellLast: { borderRightWidth: 0 },
   infoLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 2 },
   infoValue: { fontSize: 9, color: CORES.brand900 },
+
+  // ---- Caixa "Informações do Imóvel" (limpeza/energia/água/gás) ----
+  infoImovelBox: {
+    borderWidth: 1,
+    borderColor: CORES.border,
+    borderRadius: 3,
+    marginBottom: 14,
+    padding: 8
+  },
+  infoImovelTitulo: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: CORES.brand700,
+    marginBottom: 6,
+    letterSpacing: 0.5
+  },
+  infoImovelRow: { flexDirection: 'row' },
+  infoImovelCell: { flex: 1, paddingRight: 10, borderRightWidth: 1, borderRightColor: CORES.border },
+  infoImovelCellLast: { borderRightWidth: 0, paddingRight: 0 },
 
   // ---- Resumo executivo ----
   sectionTitle: {
@@ -340,6 +367,32 @@ function Cabecalho({ vistoria }) {
   )
 }
 
+function InformacoesImovel({ vistoria }) {
+  return (
+    <View style={styles.infoImovelBox} wrap={false}>
+      <Text style={styles.infoImovelTitulo}>INFORMAÇÕES DO IMÓVEL</Text>
+      <View style={styles.infoImovelRow}>
+        <View style={styles.infoImovelCell}>
+          <Text style={styles.infoLabel}>ESTADO DE LIMPEZA</Text>
+          <Text style={styles.infoValue}>{getLabelOpcao(ESTADO_LIMPEZA_OPCOES, vistoria.estado_limpeza)}</Text>
+        </View>
+        <View style={styles.infoImovelCell}>
+          <Text style={styles.infoLabel}>ENERGIA</Text>
+          <Text style={styles.infoValue}>{getLabelOpcao(ENERGIA_OPCOES, vistoria.energia)}</Text>
+        </View>
+        <View style={styles.infoImovelCell}>
+          <Text style={styles.infoLabel}>ÁGUA</Text>
+          <Text style={styles.infoValue}>{getLabelOpcao(AGUA_OPCOES, vistoria.agua)}</Text>
+        </View>
+        <View style={[styles.infoImovelCell, styles.infoImovelCellLast]}>
+          <Text style={styles.infoLabel}>GÁS</Text>
+          <Text style={styles.infoValue}>{getLabelOpcao(GAS_OPCOES, vistoria.gas)}</Text>
+        </View>
+      </View>
+    </View>
+  )
+}
+
 function ResumoExecutivo({ vistoria, ambientes }) {
   const todosItens = ambientes.flatMap((a) => a.vistoria_itens || [])
   const totalItens = todosItens.length
@@ -470,6 +523,7 @@ function LaudoDocument({ vistoria, ambientes }) {
     <Document title={`Laudo de vistoria — ${imovel.codigo_imovel || 'imóvel'}`}>
       <Page size="A4" style={styles.page} wrap>
         <Cabecalho vistoria={vistoria} />
+        <InformacoesImovel vistoria={vistoria} />
         <ResumoExecutivo vistoria={vistoria} ambientes={ambientes} />
 
         {ambientes.length === 0 ? (

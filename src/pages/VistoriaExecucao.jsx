@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { isAdmin } from '../lib/permissions'
 import AmbienteSummaryCard from '../components/execucao/AmbienteSummaryCard'
 import ItemCard from '../components/execucao/ItemCard'
+import InformacoesGeraisCard from '../components/execucao/InformacoesGeraisCard'
 import FinalizarVistoriaModal from '../components/execucao/FinalizarVistoriaModal'
 import StatusBadge from '../components/StatusBadge'
 import { AMBIENTES_PADRAO, buildMapsUrl } from '../lib/vistoriaExecucao'
@@ -31,7 +32,8 @@ export default function VistoriaExecucao() {
     addFotoItem,
     removeFotoItem,
     finalizarVistoria,
-    salvarLaudoPdf
+    salvarLaudoPdf,
+    updateInfoGeral
   } = useVistoriaExecucao(id)
 
   // Nível 1 = null (lista de ambientes) · Nível 2 = id do ambiente aberto
@@ -49,6 +51,7 @@ export default function VistoriaExecucao() {
   const [finalizarOpen, setFinalizarOpen] = useState(false)
   const [gerandoPdf, setGerandoPdf] = useState(false)
   const [pdfErrorMsg, setPdfErrorMsg] = useState('')
+  const [infoGeralError, setInfoGeralError] = useState('')
 
   const activeAmbiente = useMemo(
     () => ambientes.find((a) => a.id === activeAmbienteId) || null,
@@ -134,8 +137,16 @@ export default function VistoriaExecucao() {
     // navegar embora — é aqui que mora o botão de gerar o laudo em PDF.
   }
 
-  const handleGerarLaudo = async () => {
-    setGerandoPdf(true)
+  const handleUpdateInfoGeral = async (campo, valor) => {
+    setInfoGeralError('')
+    try {
+      await updateInfoGeral(campo, valor)
+    } catch (err) {
+      setInfoGeralError(err.message || 'Erro ao salvar informação do imóvel.')
+    }
+  }
+
+  const handleGerarLaudo = async () => {    setGerandoPdf(true)
     setPdfErrorMsg('')
     try {
       const blob = await gerarLaudoPdfBlob(vistoria, ambientes)
@@ -254,6 +265,13 @@ export default function VistoriaExecucao() {
               </a>
             )}
           </div>
+
+          <InformacoesGeraisCard
+            vistoria={vistoria}
+            readOnly={isEncerrada}
+            onUpdateCampo={handleUpdateInfoGeral}
+            errorMsg={infoGeralError}
+          />
 
           {visualizandoComoAdmin && (
             <div className="card border-l-4 border-l-brand-accent p-3 text-xs text-slate-500">

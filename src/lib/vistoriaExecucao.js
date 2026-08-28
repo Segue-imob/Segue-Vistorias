@@ -76,6 +76,36 @@ export const FUNCIONAMENTO_OPCOES = [
   { value: 'nao', label: 'Não' }
 ]
 
+// ------------------------------------------------------------------
+// Informações Gerais do Imóvel — campo único por vistoria (não por
+// ambiente/item), gravado direto em `vistorias`.
+// ------------------------------------------------------------------
+export const ESTADO_LIMPEZA_OPCOES = [
+  { value: 'limpo', label: 'Limpo' },
+  { value: 'empoeirado', label: 'Empoeirado' },
+  { value: 'sujo', label: 'Sujo' }
+]
+
+export const ENERGIA_OPCOES = [
+  { value: 'ligada', label: 'Ligada' },
+  { value: 'desligada', label: 'Desligada' }
+]
+
+export const AGUA_OPCOES = [
+  { value: 'ligada', label: 'Ligada' },
+  { value: 'desligada', label: 'Desligada' }
+]
+
+export const GAS_OPCOES = [
+  { value: 'ligado', label: 'Ligado' },
+  { value: 'desligado', label: 'Desligado' }
+]
+
+/** Acha o rótulo em português de um valor dentro de uma lista de opções. */
+export function getLabelOpcao(opcoes, valor) {
+  return opcoes.find((o) => o.value === valor)?.label || '—'
+}
+
 export function getEstadoItemMeta(estado) {
   return ESTADOS_ITEM[estado] || null
 }
