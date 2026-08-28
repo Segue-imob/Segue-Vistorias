@@ -102,11 +102,24 @@ Depois de finalizar, a tela **não navega mais embora automaticamente** — fica
 
 **Estrutura do laudo em PDF** (`src/lib/laudoPdf.jsx`, gerado 100% no navegador via `@react-pdf/renderer`, sem depender de servidor — layout baseado num modelo de laudo real de mercado, adaptado à paleta e aos dados da SEGUE Vistorias):
 
-1. **Cabeçalho** — marca "SEGUE Vistorias" (marca-d'água quadrada + wordmark, cores `#a64324`/`#261912`) e um quadro com Endereço completo, Tipo de vistoria, Data/hora de início e de finalização, Vistoriador responsável e Solicitante (nome de quem agendou — por isso `useVistoriaExecucao` agora também busca `vistoriador:vistoriador_id` e `solicitante:criado_por` junto com a vistoria).
+1. **Cabeçalho** — marca "SEGUE Vistorias" (marca-d'água quadrada + wordmark, cores `#a64324`/`#261912`) e um quadro com Endereço completo, Tipo de vistoria, Data/hora de início e de finalização, e Vistoriador responsável. O campo Solicitante foi removido do quadro — como não era usado em mais nenhum outro lugar do app, também tirei o join `solicitante:criado_por` da busca da vistoria em `useVistoriaExecucao`, evitando uma consulta desnecessária.
 2. **Resumo executivo** — cards com total de ambientes, "X/Y itens avaliados", e a contagem de itens em cada condição (Ótima/Boa/Regular/Ruim), coloridos com a mesma paleta usada no checklist.
-3. **Detalhamento por ambiente** — uma tabela por ambiente (Item / Condição / Funcionamento — agora com rótulo **N/A** para itens sem funcionamento informado, em vez de um travessão / Observações).
-4. **Galeria de fotos** — logo após a tabela de cada ambiente (mesmo padrão do laudo de referência), em grade de 3 colunas, cada foto legendada com o nome do item **e** uma legenda abaixo no formato "Foto tirada em DD/MM/AAAA às HH:mm - Item: Nome" (sem data quando a foto veio só de `fotos_urls`, sem `created_at` disponível). Cada foto é clicável (`<Link src={foto.url}>`, a URL pública original, não a versão embutida) e abre a imagem em alta resolução numa nova aba do navegador. A marca d'água de data/hora já está queimada nos pixels desde o upload, então nenhum redesenho é necessário aqui — só precisou parar de quebrar a renderização (ver nota abaixo).
+3. **Detalhamento por ambiente** — sem tabela: cada item aparece como um bloco de texto corrido (nome do item em negrito, uma bolinha colorida indicando a condição + "Condição: {label}" + "· Funcionamento: {Sim/Não/N/A}" quando informado, e a observação como parágrafo indentado abaixo) — layout inspirado num modelo de laudo real de mercado (`8.17 Armário:` seguido de bolinha + "Em estado regular..." + texto livre).
+4. **Galeria de fotos** — logo após a lista de itens de cada ambiente, em grade de 3 colunas, cada foto com o nome do item como legenda (só acima da foto — sem legenda descritiva abaixo). Cada foto é clicável (`<Link src={foto.url}>`, a URL pública original, não a versão embutida) e abre a imagem em alta resolução numa nova aba do navegador. A marca d'água de data/hora já está queimada nos pixels desde o upload, então nenhum redesenho é necessário aqui.
 5. **Encerramento** — observações finais (se preenchidas), um termo de responsabilidade original (não copiado do modelo de referência — apenas inspirado na estrutura), e o bloco de assinatura com a imagem capturada + data de conclusão.
+
+### Nova paleta das condições (bolinhas do laudo e badges do app)
+
+Atualizada em `ESTADOS_ITEM` (`src/lib/vistoriaExecucao.js`) — fonte única usada tanto no seletor de condição do checklist quanto nas bolinhas do laudo em PDF:
+
+| Condição | Cor      |
+|----------|----------|
+| Ótima    | `#2563EB` (azul) |
+| Boa      | `#16A34A` (verde) |
+| Regular  | `#CA8A04` (amarelo) |
+| Ruim     | `#DC2626` (vermelho) |
+
+Antes, "Ótima" e "Boa" usavam dois tons de verde bem parecidos (`#16A34A` e `#65A30D`) — difícil de distinguir à primeira vista. A troca pra azul/verde deixa as quatro condições visualmente inconfundíveis.
 
 ### Por que as fotos apareciam em branco no PDF
 

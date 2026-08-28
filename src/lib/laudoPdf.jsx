@@ -5,7 +5,9 @@
 // Vistorias:
 //   1. Cabeçalho com marca + quadro de dados do imóvel/vistoria
 //   2. Resumo executivo (progresso + condições gerais)
-//   3. Detalhamento por ambiente (tabela Item/Condição/Funcionamento/Obs.)
+//   3. Detalhamento por ambiente (lista por item: nome + bolinha
+//      colorida de condição + funcionamento + observação em texto
+//      corrido — sem tabela)
 //   4. Galeria de fotos de cada ambiente, logo após a respectiva tabela
 //      (as fotos já saem do upload com a marca d'água de data/hora
 //      queimada nos próprios pixels — ver src/lib/imageProcessing.js)
@@ -105,7 +107,7 @@ const styles = StyleSheet.create({
   resumoNumero: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: CORES.brand900 },
   resumoLabel: { fontSize: 7, color: CORES.brand700, marginTop: 2, textAlign: 'center' },
 
-  // ---- Ambiente: título + tabela ----
+  // ---- Ambiente: título + lista de itens (texto corrido) ----
   ambienteTitulo: {
     fontSize: 11,
     fontFamily: 'Helvetica-Bold',
@@ -117,27 +119,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     borderRadius: 2
   },
-  table: { borderWidth: 1, borderColor: CORES.border, marginBottom: 6 },
-  tr: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: CORES.border },
-  trLast: { borderBottomWidth: 0 },
-  thCell: {
-    flex: 1,
-    padding: 4,
-    backgroundColor: CORES.cream,
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 8,
-    color: CORES.brand900
-  },
-  tdCell: { flex: 1, padding: 4, fontSize: 8 },
-  colItem: { flex: 1.6 },
-  colObs: { flex: 2.2 },
+  itemBloco: { marginBottom: 7 },
+  itemNome: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: CORES.brand900, marginBottom: 2 },
+  itemCondicaoRow: { flexDirection: 'row', alignItems: 'center' },
+  itemDot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 5 },
+  itemCondicaoTexto: { fontSize: 8.5, color: CORES.brand900 },
+  itemObservacao: { fontSize: 8, color: CORES.brand700, marginTop: 2, marginLeft: 12, lineHeight: 1.4 },
 
   // ---- Galeria de fotos ----
   photosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 2, marginBottom: 12 },
   photoBox: { width: 158, marginRight: 8, marginBottom: 8 },
   photoLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 2 },
   photo: { width: 158, height: 118, objectFit: 'cover', borderRadius: 2, borderWidth: 1, borderColor: CORES.border },
-  photoCaption: { fontSize: 6, color: CORES.brand700, marginTop: 2 },
   photoIndisponivel: {
     width: 158,
     height: 118,
@@ -337,13 +330,9 @@ function Cabecalho({ vistoria }) {
           </View>
         </View>
         <View style={[styles.infoRow, styles.infoRowLast]}>
-          <View style={styles.infoCell}>
+          <View style={[styles.infoCell, styles.infoCellLast, { flex: 1 }]}>
             <Text style={styles.infoLabel}>VISTORIADOR RESPONSÁVEL</Text>
             <Text style={styles.infoValue}>{vistoria.vistoriador?.nome || '—'}</Text>
-          </View>
-          <View style={[styles.infoCell, styles.infoCellLast]}>
-            <Text style={styles.infoLabel}>SOLICITANTE</Text>
-            <Text style={styles.infoValue}>{vistoria.solicitante?.nome || '—'}</Text>
           </View>
         </View>
       </View>
@@ -391,14 +380,6 @@ function ResumoExecutivo({ vistoria, ambientes }) {
   )
 }
 
-function legendaFoto(foto, item) {
-  const nomeItem = item.item || item.nome || 'Item'
-  if (foto.created_at) {
-    return `Foto tirada em ${formatarData(foto.created_at)} - Item: ${nomeItem}`
-  }
-  return `Item: ${nomeItem}`
-}
-
 function AmbienteSecao({ ambiente }) {
   const itens = ambiente.vistoria_itens || []
   const fotos = itens.flatMap((it) => (it._fotosParaPdf || []).map((foto) => ({ foto, item: it })))
@@ -407,22 +388,21 @@ function AmbienteSecao({ ambiente }) {
     <View>
       <Text style={styles.ambienteTitulo}>{ambiente.ambiente || ambiente.nome}</Text>
 
-      <View style={styles.table} wrap={false}>
-        <View style={styles.tr}>
-          <Text style={[styles.thCell, styles.colItem]}>Item</Text>
-          <Text style={styles.thCell}>Condição</Text>
-          <Text style={styles.thCell}>Funcionamento</Text>
-          <Text style={[styles.thCell, styles.colObs]}>Observações</Text>
-        </View>
-        {itens.map((item, index) => {
+      <View style={{ marginBottom: 8 }}>
+        {itens.map((item) => {
           const meta = getEstadoItemMeta(item.estado)
-          const isLast = index === itens.length - 1
+          const nomeItem = item.item || item.nome || 'Item'
           return (
-            <View key={item.id} style={[styles.tr, isLast ? styles.trLast : null]}>
-              <Text style={[styles.tdCell, styles.colItem]}>{item.item || item.nome}</Text>
-              <Text style={styles.tdCell}>{meta ? meta.label : 'Não avaliado'}</Text>
-              <Text style={styles.tdCell}>{labelFuncionamento(item.funcionamento)}</Text>
-              <Text style={[styles.tdCell, styles.colObs]}>{item.observacao || '—'}</Text>
+            <View key={item.id} style={styles.itemBloco} wrap={false}>
+              <Text style={styles.itemNome}>{nomeItem}</Text>
+              <View style={styles.itemCondicaoRow}>
+                <View style={[styles.itemDot, { backgroundColor: meta ? meta.color : CORES.border }]} />
+                <Text style={styles.itemCondicaoTexto}>
+                  {meta ? `Condição: ${meta.label}` : 'Não avaliado'}
+                  {item.funcionamento ? `   ·   Funcionamento: ${labelFuncionamento(item.funcionamento)}` : ''}
+                </Text>
+              </View>
+              {item.observacao && <Text style={styles.itemObservacao}>{item.observacao}</Text>}
             </View>
           )
         })}
@@ -438,13 +418,12 @@ function AmbienteSecao({ ambiente }) {
                   <Image src={foto._pdfSrc} style={styles.photo} />
                 </Link>
               ) : (
-                <View style={styles.photoIndisponivel}>
-                  <Text style={styles.photoIndisponivelTexto}>Foto indisponível — abrir original abaixo</Text>
-                </View>
+                <Link src={foto.url}>
+                  <View style={styles.photoIndisponivel}>
+                    <Text style={styles.photoIndisponivelTexto}>Foto indisponível — abrir original</Text>
+                  </View>
+                </Link>
               )}
-              <Link src={foto.url}>
-                <Text style={styles.photoCaption}>{legendaFoto(foto, item)}</Text>
-              </Link>
             </View>
           ))}
         </View>

@@ -32,37 +32,39 @@ export const FOTOS_BUCKET = 'vistorias-fotos'
 export const MAX_FOTOS_POR_ITEM = 30
 
 // Condição de cada item vistoriado, na ordem exata pedida:
-// Ótima -> Boa -> Regular -> Ruim. Cores propositalmente diferentes
-// da paleta de STATUS da vistoria (src/lib/constants.js) para não
-// confundir "condição do item" com "status da vistoria".
+// Ótima -> Boa -> Regular -> Ruim. Paleta oficial de condição (usada
+// tanto no seletor do checklist quanto nas bolinhas/badges do laudo
+// em PDF) — propositalmente diferente da paleta de STATUS da
+// vistoria (src/lib/constants.js) para não confundir "condição do
+// item" com "status da vistoria".
 export const ESTADOS_ITEM = {
   otima: {
     value: 'otima',
     label: 'Ótima',
-    color: '#16A34A',
-    bg: 'bg-[#16A34A]/10',
-    text: 'text-[#15803D]'
+    color: '#2563EB',
+    bg: 'bg-[#2563EB]/10',
+    text: 'text-[#2563EB]'
   },
   boa: {
     value: 'boa',
     label: 'Boa',
-    color: '#65A30D',
-    bg: 'bg-[#65A30D]/10',
-    text: 'text-[#4D7C0F]'
+    color: '#16A34A',
+    bg: 'bg-[#16A34A]/10',
+    text: 'text-[#16A34A]'
   },
   regular: {
     value: 'regular',
     label: 'Regular',
-    color: '#F59E0B',
-    bg: 'bg-[#F59E0B]/10',
-    text: 'text-[#B45309]'
+    color: '#CA8A04',
+    bg: 'bg-[#CA8A04]/10',
+    text: 'text-[#CA8A04]'
   },
   ruim: {
     value: 'ruim',
     label: 'Ruim',
     color: '#DC2626',
     bg: 'bg-[#DC2626]/10',
-    text: 'text-[#B91C1C]'
+    text: 'text-[#DC2626]'
   }
 }
 
