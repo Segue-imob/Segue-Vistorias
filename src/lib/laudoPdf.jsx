@@ -4,14 +4,17 @@
 // laudo real de mercado, adaptada à identidade e aos dados da SEGUE
 // Vistorias:
 //   1. Cabeçalho com marca + quadro de dados do imóvel/vistoria
-//   2. Resumo executivo (progresso + condições gerais)
-//   3. Detalhamento por ambiente (lista por item: nome + bolinha
+//   2. Caixa "Informações do Imóvel" (limpeza, energia, água, gás)
+//   3. Introdução + legenda dos parâmetros de condição (Ótimo/Bom/
+//      Regular/Ruim), com as cores oficiais de cada um
+//   4. Resumo executivo (progresso + condições gerais)
+//   5. Detalhamento por ambiente (lista por item: nome + bolinha
 //      colorida de condição + funcionamento + observação em texto
 //      corrido — sem tabela)
-//   4. Galeria de fotos de cada ambiente, logo após a respectiva tabela
+//   6. Galeria de fotos de cada ambiente, logo após a respectiva lista
 //      (as fotos já saem do upload com a marca d'água de data/hora
 //      queimada nos próprios pixels — ver src/lib/imageProcessing.js)
-//   5. Encerramento: observações finais, termo de responsabilidade e
+//   7. Encerramento: observações finais, termo de responsabilidade e
 //      assinatura digital com data de conclusão
 //
 // SOBRE AS FOTOS EM BRANCO: nossas fotos são comprimidas em WebP
@@ -108,6 +111,15 @@ const styles = StyleSheet.create({
   infoImovelRow: { flexDirection: 'row' },
   infoImovelCell: { flex: 1, paddingRight: 10, borderRightWidth: 1, borderRightColor: CORES.border },
   infoImovelCellLast: { borderRightWidth: 0, paddingRight: 0 },
+
+  // ---- Introdução + legenda de condição ----
+  introTexto: { fontSize: 8.5, color: CORES.brand900, lineHeight: 1.5, marginBottom: 10, textAlign: 'justify' },
+  introSubtitulo: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: CORES.brand900, marginBottom: 6 },
+  legendaBox: { borderWidth: 1, borderColor: CORES.border, borderRadius: 3, padding: 8, marginBottom: 14 },
+  legendaLinha: { flexDirection: 'row', marginBottom: 5 },
+  legendaDot: { marginTop: 2 },
+  legendaTitulo: { fontFamily: 'Helvetica-Bold', fontSize: 8.5 },
+  legendaTexto: { fontSize: 8.5, color: CORES.brand900, flex: 1, lineHeight: 1.4 },
 
   // ---- Resumo executivo ----
   sectionTitle: {
@@ -393,6 +405,55 @@ function InformacoesImovel({ vistoria }) {
   )
 }
 
+// Legenda de condição usada só na Introdução — os títulos aqui usam a
+// forma masculina (ÓTIMO/BOM/REGULAR/RUIM, referindo-se a "o item"),
+// como pedido explicitamente para este bloco; o resto do laudo e do
+// app continua usando ESTADOS_ITEM.label ("Ótima/Boa/Regular/Ruim").
+const LEGENDA_CONDICAO = [
+  { chave: 'otima', titulo: 'ÓTIMO', descricao: 'Item sem marcas de uso ou recém-instalado/novo.' },
+  { chave: 'boa', titulo: 'BOM', descricao: 'Apresenta pouco desgaste decorrente de uso normal.' },
+  {
+    chave: 'regular',
+    titulo: 'REGULAR',
+    descricao: 'Apresenta sinais de desgastes aparentes ou pequenas avarias funcionais/estéticas.'
+  },
+  {
+    chave: 'ruim',
+    titulo: 'RUIM',
+    descricao: 'Apresenta grandes sinais de deterioração, avarias graves ou ausência de funcionalidade.'
+  }
+]
+
+function Introducao() {
+  return (
+    <View wrap={false}>
+      <Text style={styles.sectionTitle}>Introdução</Text>
+      <Text style={styles.introTexto}>
+        As informações constantes neste relatório trazem uma descrição fiel do atual estado do imóvel
+        vistoriado. Além das informações escritas, as fotos anexas servem como provas da vistoria realizada e
+        da condição do imóvel. Certifique-se de ter recebido as fotos; se porventura não as tenha recebido,
+        faça a solicitação.
+      </Text>
+
+      <Text style={styles.introSubtitulo}>Parâmetros de Avaliação / Condição dos Itens</Text>
+      <View style={styles.legendaBox}>
+        {LEGENDA_CONDICAO.map((item) => {
+          const meta = getEstadoItemMeta(item.chave)
+          return (
+            <View key={item.chave} style={styles.legendaLinha}>
+              <View style={[styles.itemDot, styles.legendaDot, { backgroundColor: meta.color }]} />
+              <Text style={styles.legendaTexto}>
+                <Text style={[styles.legendaTitulo, { color: meta.color }]}>{item.titulo}: </Text>
+                {item.descricao}
+              </Text>
+            </View>
+          )
+        })}
+      </View>
+    </View>
+  )
+}
+
 function ResumoExecutivo({ vistoria, ambientes }) {
   const todosItens = ambientes.flatMap((a) => a.vistoria_itens || [])
   const totalItens = todosItens.length
@@ -524,6 +585,7 @@ function LaudoDocument({ vistoria, ambientes }) {
       <Page size="A4" style={styles.page} wrap>
         <Cabecalho vistoria={vistoria} />
         <InformacoesImovel vistoria={vistoria} />
+        <Introducao />
         <ResumoExecutivo vistoria={vistoria} ambientes={ambientes} />
 
         {ambientes.length === 0 ? (

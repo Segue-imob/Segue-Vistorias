@@ -119,6 +119,10 @@ Depois de finalizar, a tela **não navega mais embora automaticamente** — fica
 4. **Galeria de fotos** — logo após a lista de itens de cada ambiente, em grade de 3 colunas, cada foto com o nome do item como legenda (só acima da foto — sem legenda descritiva abaixo). Cada foto é clicável (`<Link src={foto.url}>`, a URL pública original, não a versão embutida) e abre a imagem em alta resolução numa nova aba do navegador. A marca d'água de data/hora já está queimada nos pixels desde o upload, então nenhum redesenho é necessário aqui.
 5. **Encerramento** — observações finais (se preenchidas), um termo de responsabilidade original (não copiado do modelo de referência — apenas inspirado na estrutura), e o bloco de assinatura com a imagem capturada + data de conclusão.
 
+### Seção "Introdução" no laudo
+
+Logo após a caixa "Informações do Imóvel" e antes do Resumo Executivo, o laudo agora tem uma seção **Introdução** (`Introducao()` em `laudoPdf.jsx`): um parágrafo explicando o propósito do relatório, seguido de "Parâmetros de Avaliação / Condição dos Itens" — uma legenda com bolinha colorida + descrição de cada condição (ÓTIMO/BOM/REGULAR/RUIM), usando as mesmas cores oficiais de `ESTADOS_ITEM`. Os títulos da legenda usam a forma masculina (referindo-se a "o item", como no texto que você passou) só nesse bloco — o resto do laudo e do app continuam com "Ótima/Boa/Regular/Ruim" (forma feminina, referindo-se a "a condição"), sem mudança nos rótulos usados em todo o resto do sistema.
+
 ### Nova paleta das condições (bolinhas do laudo e badges do app)
 
 Atualizada em `ESTADOS_ITEM` (`src/lib/vistoriaExecucao.js`) — fonte única usada tanto no seletor de condição do checklist quanto nas bolinhas do laudo em PDF:
