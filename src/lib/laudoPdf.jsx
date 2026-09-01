@@ -239,6 +239,18 @@ function formatarData(iso) {
   }
 }
 
+/**
+ * Exibição estritamente condicional: só considera "preenchido" se o
+ * vistoriador de fato tocou em Sim ou Não no seletor. Qualquer outro
+ * valor — null, undefined, string vazia, ou até um valor inesperado
+ * que não seja exatamente 'sim'/'nao' — conta como "não selecionado"
+ * e a linha de Funcionamento nem aparece (nunca cai no fallback
+ * "N/A" de labelFuncionamento, que só serve pra uso interno).
+ */
+function funcionamentoFoiSelecionado(valor) {
+  return valor === 'sim' || valor === 'nao'
+}
+
 function labelFuncionamento(valor) {
   if (valor === 'sim') return 'Sim'
   if (valor === 'nao') return 'Não'
@@ -547,7 +559,9 @@ function AmbienteSecao({ ambiente, numero }) {
               <View style={[styles.itemDot, { backgroundColor: meta ? meta.color : CORES.border }]} />
               <Text style={styles.itemCondicaoTexto}>
                 {meta ? `Condição: ${meta.label}` : 'Não avaliado'}
-                {item.funcionamento ? `   ·   Funcionamento: ${labelFuncionamento(item.funcionamento)}` : ''}
+                {funcionamentoFoiSelecionado(item.funcionamento)
+                  ? `   ·   Funcionamento: ${labelFuncionamento(item.funcionamento)}`
+                  : ''}
               </Text>
             </View>
             {item.observacao && <Text style={styles.itemObservacao}>{item.observacao}</Text>}

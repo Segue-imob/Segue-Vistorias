@@ -126,6 +126,10 @@ Depois de finalizar, a tela **não navega mais embora automaticamente** — fica
 
 Logo após a caixa "Informações do Imóvel" e antes do Resumo Executivo, o laudo agora tem uma seção **Introdução** (`Introducao()` em `laudoPdf.jsx`): um parágrafo explicando o propósito do relatório, seguido de "Parâmetros de Avaliação / Condição dos Itens" — uma legenda com bolinha colorida + descrição de cada condição (ÓTIMO/BOM/REGULAR/RUIM), usando as mesmas cores oficiais de `ESTADOS_ITEM`. Os títulos da legenda usam a forma masculina (referindo-se a "o item", como no texto que você passou) só nesse bloco — o resto do laudo e do app continuam com "Ótima/Boa/Regular/Ruim" (forma feminina, referindo-se a "a condição"), sem mudança nos rótulos usados em todo o resto do sistema.
 
+### Exibição condicional do Funcionamento — checagem estrita
+
+A linha de status de cada item já omitia "Funcionamento" quando o campo estava vazio (`item.funcionamento ? ... : ''`), mas isso só protegia contra `null`/`undefined`/string vazia — qualquer outro valor que não fosse exatamente `'sim'` ou `'nao'` (por exemplo, um resíduo de dado antigo ou um valor fora do esperado) ainda passava pela checagem de "truthy" e caía no fallback `'N/A'` de `labelFuncionamento()`, imprimindo "Funcionamento: N/A" indevidamente. Troquei por `funcionamentoFoiSelecionado(valor)`, que só considera preenchido quando o valor é **exatamente** `'sim'` ou `'nao'` — qualquer outra coisa (incluindo um eventual "N/A" salvo por engano) faz a linha de Funcionamento não aparecer, nunca chegando a chamar `labelFuncionamento()` de dentro da renderização visível.
+
 ### Nova paleta das condições (bolinhas do laudo e badges do app)
 
 Atualizada em `ESTADOS_ITEM` (`src/lib/vistoriaExecucao.js`) — fonte única usada tanto no seletor de condição do checklist quanto nas bolinhas do laudo em PDF:
