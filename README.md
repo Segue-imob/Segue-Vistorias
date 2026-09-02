@@ -234,7 +234,21 @@ Fotos do checklist e a assinatura digital ficam em `vistorias-fotos/<vistoria_id
 - `src/components/execucao/` — `AmbienteSummaryCard` (card do Nível 1, com progresso), `ItemCard` (card do Nível 2, um por item — estado + observação + fotos), `ItemEstadoSelector`, `FotoUploader` (atalho de câmera via `capture="environment"`), `SignatureCanvas` (assinatura em `<canvas>`, mouse + toque) e `FinalizarVistoriaModal` (resumo por item + assinatura + confirmação).
 - `src/pages/VistoriaExecucao.jsx` — junta tudo na rota `/minhas-vistorias/:id`, controlando qual nível está ativo (`activeAmbienteId`); quando a vistoria já está `finalizada`/`cancelada`, o checklist abre em modo somente leitura nos dois níveis.
 
+## Reaproveitar Entrada como referência na Saída
+
+Ao abrir uma vistoria de tipo **Saída** que ainda não tem nenhum ambiente criado (nível 1, checklist zerado), se o mesmo imóvel tiver uma vistoria de **Entrada finalizada** anterior, um modal pergunta: "Identificamos uma Vistoria de Entrada anterior para este imóvel. Deseja aproveitar os ambientes e as fotos como referência para esta Vistoria de Saída?" — com "Começar em branco" e "Aproveitar como referência".
+
+- **Detecção**: `useVistoriaExecucao` roda essa checagem dentro do `fetchAll` só quando `vistoria.tipo === 'Saída'` — busca a Entrada mais recente com `status = 'finalizada'` pro mesmo `imovel_id`, excluindo a própria vistoria. Guarda em `vistoriaEntradaRef` (ou `null`, se não achar nenhuma).
+- **Quando aparece**: só antes do vistoriador ter criado qualquer ambiente manualmente (senão a pergunta apareceria em cima de um checklist já em andamento), e só uma vez por sessão — recusar ou fechar o modal (✕, clique fora, ou "Começar em branco") marca `respondeuImportacao` e ele não volta a aparecer até a página recarregar.
+- **Se aceitar** (`importarDeVistoriaEntrada()` no hook): copia, em sequência, cada ambiente da Entrada → cada item desse ambiente → cada foto desse item, tudo pra dentro da vistoria de Saída atual. As fotos **não são reenviadas** ao Storage — a nova linha em `vistoria_fotos` só aponta pra mesma URL pública já existente, então a cópia é rápida e não duplica arquivo nenhum.
+
+**Decisão de integridade de dados, importante**: **Condição e Funcionamento NÃO são copiados** — cada item entra na Saída com `estado`/`funcionamento` em branco, exatamente como um item novo criado do zero. Copiar a avaliação antiga da Entrada faria o vistoriador poder esquecer de reavaliar um item, e a Saída acabaria herdando silenciosamente uma condição que era de outra visita — a mesma lógica por trás de nunca pré-preencher um item novo como "Bom" (ver seção de Execução de vistoria mais abaixo). O que **é** copiado — nome do ambiente/item, a observação antiga (prefixada com "Referência (Vistoria de Entrada): ..." pra deixar claro que não é da visita atual) e as fotos antigas — é material de referência/comparação, não uma avaliação já pronta. O vistoriador ainda precisa tocar em Ótimo/Bom/Regular/Ruim e Sim/Não pra cada item, e pode anexar fotos novas ao lado das antigas pra comparação lado a lado.
+
+
+
 ## Cadastro de imóvel (dentro do agendamento de vistoria)
+
+Imóveis já cadastrados persistem normalmente na tabela `imoveis` (é uma tabela Postgres comum, sem nenhum mecanismo temporário) e aparecem todos no dropdown "Selecione um imóvel" de `VistoriaModal.jsx` (`useImoveis()`, sem filtro por vistoriador/data — lista tudo). Selecionar um imóvel existente só define `form.imovel_id` com o `id` daquela linha; o formulário de "Novo imóvel" abaixo é opcional e só entra em jogo quando o usuário explicitamente clica em "+ Novo imóvel" pra cadastrar um imóvel que ainda não existe — nunca é obrigatório nem reaberto ao selecionar um já cadastrado.
 
 O formulário de "Novo imóvel" fica embutido em `VistoriaModal.jsx` (colapsável, acionado pelo link "+ Novo imóvel" ao lado do seletor de Imóvel) — não é uma tela própria, é um atalho pra cadastrar o imóvel sem sair do fluxo de agendar a vistoria.
 

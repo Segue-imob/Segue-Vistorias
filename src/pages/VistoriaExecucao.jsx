@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileDown, Loader2, MapPin, Plus, RefreshCw } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileDown, History, Loader2, MapPin, Plus, RefreshCw } from 'lucide-react'
 import { useVistoriaExecucao } from '../hooks/useVistoriaExecucao'
 import { useAuth } from '../context/AuthContext'
 import { isAdmin } from '../lib/permissions'
@@ -10,6 +10,7 @@ import InformacoesGeraisCard from '../components/execucao/InformacoesGeraisCard'
 import FinalizarVistoriaModal from '../components/execucao/FinalizarVistoriaModal'
 import PhotoLightbox from '../components/execucao/PhotoLightbox'
 import ConfirmDialog from '../components/ConfirmDialog'
+import Modal from '../components/Modal'
 import StatusBadge from '../components/StatusBadge'
 import SuccessBanner from '../components/SuccessBanner'
 import { AMBIENTES_PADRAO, buildMapsUrl, montarNomeArquivoLaudo } from '../lib/vistoriaExecucao'
@@ -25,6 +26,7 @@ export default function VistoriaExecucao() {
     ambientes,
     loading,
     error,
+    vistoriaEntradaRef,
     addAmbiente,
     removeAmbiente,
     addItemCustom,
@@ -37,7 +39,8 @@ export default function VistoriaExecucao() {
     finalizarVistoria,
     salvarLaudoPdf,
     sincronizarVistoria,
-    updateInfoGeral
+    updateInfoGeral,
+    importarDeVistoriaEntrada
   } = useVistoriaExecucao(id)
 
   // Nível 1 = null (lista de ambientes) · Nível 2 = id do ambiente aberto
@@ -58,6 +61,9 @@ export default function VistoriaExecucao() {
   const [sincronizando, setSincronizando] = useState(false)
   const [sincronizarSucesso, setSincronizarSucesso] = useState('')
   const [sincronizarErro, setSincronizarErro] = useState('')
+  const [respondeuImportacao, setRespondeuImportacao] = useState(false)
+  const [importando, setImportando] = useState(false)
+  const [importarErro, setImportarErro] = useState('')
   const [infoGeralError, setInfoGeralError] = useState('')
 
   // Lightbox global de fotos — navega por TODAS as fotos da vistoria
@@ -128,6 +134,31 @@ export default function VistoriaExecucao() {
   const mapsUrl = buildMapsUrl(vistoria.imoveis)
   const isEncerrada = vistoria.status === 'finalizada' || vistoria.status === 'cancelada'
   const visualizandoComoAdmin = isAdmin(role)
+
+  // Entrada -> Saída: oferece importar ambientes/fotos da Entrada
+  // anterior só antes do vistoriador ter criado qualquer ambiente
+  // manualmente (senão a pergunta apareceria em cima de um checklist
+  // já em andamento) e só uma vez por sessão (`respondeuImportacao`).
+  const podeOferecerImportacao =
+    Boolean(vistoriaEntradaRef) && ambientes.length === 0 && !isEncerrada && !respondeuImportacao
+
+  const handleAceitarImportacao = async () => {
+    setImportando(true)
+    setImportarErro('')
+    try {
+      await importarDeVistoriaEntrada(vistoriaEntradaRef.id)
+      setRespondeuImportacao(true)
+    } catch (err) {
+      console.error('[VistoriaExecucao] Erro ao importar dados da Vistoria de Entrada:', err.message, err)
+      setImportarErro(err.message || 'Erro ao importar os dados da Vistoria de Entrada.')
+    } finally {
+      setImportando(false)
+    }
+  }
+
+  const handleRecusarImportacao = () => {
+    setRespondeuImportacao(true)
+  }
 
   const handleAddAmbiente = async () => {
     const nome = novoAmbiente === 'Outro' ? customAmbiente.trim() : novoAmbiente
@@ -501,6 +532,45 @@ export default function VistoriaExecucao() {
         danger
         onConfirm={handleConfirmarRemocaoGlobal}
       />
+
+      <Modal
+        open={podeOferecerImportacao}
+        onClose={handleRecusarImportacao}
+        title="Vistoria de Entrada encontrada"
+        subtitle="Identificamos uma Vistoria de Entrada anterior para este imóvel."
+      >
+        <div className="flex items-start gap-3">
+          <History size={20} className="mt-0.5 shrink-0 text-brand-accent" />
+          <p className="text-sm text-slate-600">
+            Deseja aproveitar os ambientes e as fotos como referência para esta Vistoria de Saída? Os itens
+            entram sem condição avaliada — você reavalia cada um em campo, comparando com o que foi registrado
+            na Entrada. As observações antigas ficam marcadas como referência, e você pode acrescentar novas
+            fotos de comparação a qualquer momento.
+          </p>
+        </div>
+
+        {importarErro && <p className="mt-3 text-xs font-medium text-red-500">{importarErro}</p>}
+
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={handleRecusarImportacao}
+            disabled={importando}
+            className="btn-secondary justify-center"
+          >
+            Começar em branco
+          </button>
+          <button
+            type="button"
+            onClick={handleAceitarImportacao}
+            disabled={importando}
+            className="btn-primary justify-center"
+          >
+            {importando && <Loader2 size={15} className="animate-spin" />}
+            Aproveitar como referência
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

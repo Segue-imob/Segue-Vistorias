@@ -58,6 +58,7 @@ export function useVistoriaExecucao(vistoriaId) {
   const [ambientes, setAmbientes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [vistoriaEntradaRef, setVistoriaEntradaRef] = useState(null)
   const primeiroCarregamento = useRef(true)
 
   const fetchAll = useCallback(async () => {
@@ -88,8 +89,29 @@ export function useVistoriaExecucao(vistoriaId) {
     if (vErr || !vistoriaData) {
       setError(vErr || null)
       setAmbientes([])
+      setVistoriaEntradaRef(null)
       setLoading(false)
       return
+    }
+
+    // Entrada -> Saída: se esta vistoria é uma "Saída" e o imóvel tem
+    // uma "Entrada" finalizada anterior, guarda essa referência —
+    // VistoriaExecucao.jsx usa isso pra oferecer o modal de
+    // reaproveitar ambientes/fotos como ponto de partida.
+    if (vistoriaData.tipo === 'Saída' && vistoriaData.imovel_id) {
+      const { data: entradaCandidata } = await supabase
+        .from('vistorias')
+        .select('id, data_agendamento, finalizada_em')
+        .eq('imovel_id', vistoriaData.imovel_id)
+        .eq('tipo', 'Entrada')
+        .eq('status', 'finalizada')
+        .neq('id', vid)
+        .order('finalizada_em', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      setVistoriaEntradaRef(entradaCandidata || null)
+    } else {
+      setVistoriaEntradaRef(null)
     }
 
     const { data: ambientesData, error: aErr } = await supabase
@@ -684,6 +706,111 @@ export function useVistoriaExecucao(vistoriaId) {
   )
 
   /**
+   * Entrada -> Saída: copia ambientes, itens e fotos de uma vistoria
+   * de Entrada finalizada pra esta vistoria de Saída, como ponto de
+   * partida/referência de comparação.
+   *
+   * Decisão de integridade de dados: a Condição e o Funcionamento de
+   * cada item NÃO são copiados — cada item novo nasce com
+   * `estado`/`funcionamento` em branco, exatamente como um item
+   * criado do zero. Copiar a avaliação antiga faria o vistoriador
+   * poder "esquecer" de reavaliar um item e a Saída acabar herdando
+   * silenciosamente uma condição que era da Entrada — a mesma lógica
+   * por trás de nunca pré-preencher um item novo como "Bom" (ver
+   * README). O que É copiado — nome do ambiente/item, a observação
+   * antiga (como referência, prefixada) e as fotos antigas — é
+   * material de referência, não uma avaliação already-feita.
+   */
+  const importarDeVistoriaEntrada = useCallback(
+    async (vistoriaEntradaId) => {
+      const { data: ambientesEntrada, error: aErr } = await supabase
+        .from('vistoria_ambientes')
+        .select('*')
+        .eq('vistoria_id', vistoriaEntradaId)
+        .order('created_at', { ascending: true })
+      if (aErr) throw aErr
+
+      const ambienteIdsEntrada = (ambientesEntrada || []).map((a) => a.id)
+
+      let itensEntrada = []
+      if (ambienteIdsEntrada.length > 0) {
+        const { data, error } = await supabase
+          .from('vistoria_itens')
+          .select('*')
+          .in('ambiente_id', ambienteIdsEntrada)
+          .order('created_at', { ascending: true })
+        if (error) throw error
+        itensEntrada = data || []
+      }
+
+      const itemIdsEntrada = itensEntrada.map((it) => it.id)
+
+      let fotosEntrada = []
+      if (itemIdsEntrada.length > 0) {
+        const { data, error } = await supabase.from('vistoria_fotos').select('*').in('item_id', itemIdsEntrada)
+        if (error) throw error
+        fotosEntrada = data || []
+      }
+
+      for (const ambienteEntrada of ambientesEntrada || []) {
+        const nomeAmbiente = ambienteEntrada.ambiente || ambienteEntrada.nome
+        const { data: novoAmbiente, error: novoAmbErr } = await supabase
+          .from('vistoria_ambientes')
+          .insert({ vistoria_id: vistoriaId, ambiente: nomeAmbiente, nome: nomeAmbiente })
+          .select()
+          .single()
+        if (novoAmbErr) throw novoAmbErr
+
+        const itensDoAmbiente = itensEntrada.filter((it) => it.ambiente_id === ambienteEntrada.id)
+
+        for (const itemEntrada of itensDoAmbiente) {
+          const nomeItem = itemEntrada.item || itemEntrada.nome
+          const observacaoReferencia = itemEntrada.observacao
+            ? `Referência (Vistoria de Entrada): ${itemEntrada.observacao}`
+            : null
+
+          const { data: novoItem, error: novoItemErr } = await supabase
+            .from('vistoria_itens')
+            .insert({
+              ambiente_id: novoAmbiente.id,
+              item: nomeItem,
+              nome: nomeItem,
+              estado: null,
+              status: null,
+              funcionamento: null,
+              observacao: observacaoReferencia
+            })
+            .select()
+            .single()
+          if (novoItemErr) throw novoItemErr
+
+          const fotosDoItem = fotosEntrada.filter((f) => f.item_id === itemEntrada.id)
+          for (const foto of fotosDoItem) {
+            const urlFoto = foto.url || foto.foto_url
+            if (!urlFoto) continue
+            const { error: novaFotoErr } = await supabase.from('vistoria_fotos').insert({
+              vistoria_id: vistoriaId,
+              ambiente_id: novoAmbiente.id,
+              item_id: novoItem.id,
+              foto_url: urlFoto,
+              url: urlFoto
+            })
+            if (novaFotoErr) {
+              console.warn(
+                '[useVistoriaExecucao] Falha ao copiar uma foto de referência da Vistoria de Entrada:',
+                novaFotoErr.message
+              )
+            }
+          }
+        }
+      }
+
+      await fetchAll()
+    },
+    [vistoriaId, fetchAll]
+  )
+
+  /**
    * "Sincronizar Vistoria" — ação do vistoriador que libera o laudo
    * pro Solicitante: gera o PDF (feito por quem chama, via
    * gerarLaudoPdfBlob), sobe pro Storage, grava `laudo_pdf_url` e
@@ -731,6 +858,7 @@ export function useVistoriaExecucao(vistoriaId) {
     ambientes,
     loading,
     error,
+    vistoriaEntradaRef,
     refetch: fetchAll,
     addAmbiente,
     removeAmbiente,
@@ -745,6 +873,7 @@ export function useVistoriaExecucao(vistoriaId) {
     finalizarVistoria,
     salvarLaudoPdf,
     sincronizarVistoria,
-    updateInfoGeral
+    updateInfoGeral,
+    importarDeVistoriaEntrada
   }
 }
