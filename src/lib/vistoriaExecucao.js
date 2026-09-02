@@ -2,14 +2,269 @@
 // Constantes do checklist de execução de vistoria (perfil Vistoriador).
 // ------------------------------------------------------------------
 
-// Última opção ("Outro") libera um campo de texto livre na UI, para
-// nomear ambientes repetidos (ex.: "Quarto 1", "Quarto 2").
-export const AMBIENTES_PADRAO = ['Sala', 'Cozinha', 'Quarto', 'Banheiro', 'Varanda', 'Outro']
+// Última opção de cada grupo relevante ("Outro Ambiente
+// (Personalizado)") libera um campo de texto livre na UI, para
+// nomear ambientes que não estão na lista (ex.: "Quarto 3", um nome
+// bem específico do imóvel).
+export const AMBIENTE_PERSONALIZADO = 'Outro Ambiente (Personalizado)'
 
-// Itens padrão carregados automaticamente ao criar um ambiente. O
-// vistoriador ainda pode adicionar itens personalizados por cima
-// desses com "+ Adicionar Outro Item".
-export const ITENS_PADRAO = [
+// Ambientes agrupados por categoria — usado pra montar o <select> com
+// <optgroup> no formulário "Adicionar ambiente". Nenhum agrupamento
+// dentro do catálogo de itens em si: cada ambiente individual tem seu
+// próprio catálogo em ITENS_POR_AMBIENTE, mesmo dois ambientes do
+// mesmo grupo (ex. "Banheiro Social" e "Banheiro Suíte") tendo listas
+// parecidas mas não idênticas.
+export const AMBIENTES_GRUPOS = [
+  {
+    grupo: 'Ambientes Sociais',
+    ambientes: ['Sala de Estar', 'Sala de Jantar', 'Sala de TV', 'Hall de Entrada', 'Lavabo', 'Circulação / Corredor']
+  },
+  {
+    grupo: 'Ambientes Privativos',
+    ambientes: ['Quarto', 'Suíte', 'Closet', 'Escritório', 'Quarto de Hóspedes']
+  },
+  {
+    grupo: 'Cozinha e Serviços',
+    ambientes: [
+      'Cozinha',
+      'Copa',
+      'Despensa',
+      'Área de Serviço',
+      'Lavanderia',
+      'Banheiro de Serviço',
+      'Quarto de Serviço'
+    ]
+  },
+  {
+    grupo: 'Banheiros',
+    ambientes: ['Banheiro Social', 'Banheiro Suíte', 'Banheiro Externo']
+  },
+  {
+    grupo: 'Áreas Externas e Lazer',
+    ambientes: [
+      'Varanda',
+      'Varanda Gourmet',
+      'Sacada',
+      'Terraço',
+      'Quintal',
+      'Jardim',
+      'Piscina',
+      'Área de Churrasqueira',
+      'Garagem',
+      'Vaga de Garagem'
+    ]
+  },
+  {
+    grupo: 'Comerciais e Apoio',
+    ambientes: ['Recepção', 'Sala de Reunião', 'Galpão', 'Loja', 'Mezanino', 'Depósito / Box', AMBIENTE_PERSONALIZADO]
+  }
+]
+
+// Lista achatada (todos os ambientes, na ordem dos grupos acima) —
+// usada onde só interessa "todos os nomes", sem a estrutura de grupo
+// (ex.: valor inicial do seletor).
+export const AMBIENTES_PADRAO = AMBIENTES_GRUPOS.flatMap((g) => g.ambientes)
+
+// Catálogo de itens específico de cada ambiente individual — cada
+// ambiente tem sua própria lista, sem reaproveitar um catálogo
+// genérico único pra tudo (ex.: "Varanda" e "Varanda Gourmet" são
+// listas completamente diferentes, mesmo os dois sendo áreas
+// externas).
+export const ITENS_POR_AMBIENTE = {
+  // ---- Ambientes Sociais ----
+  'Sala de Estar': [
+    'Piso',
+    'Rodapé',
+    'Parede',
+    'Teto',
+    'Porta',
+    'Janela',
+    'Interruptores e Tomadas',
+    'Luminária',
+    'Ponto de TV/Internet'
+  ],
+  'Sala de Jantar': ['Piso', 'Rodapé', 'Parede', 'Teto', 'Porta', 'Janela', 'Interruptores e Tomadas', 'Luminária'],
+  'Sala de TV': [
+    'Piso',
+    'Rodapé',
+    'Parede',
+    'Teto',
+    'Porta',
+    'Janela',
+    'Interruptores e Tomadas',
+    'Luminária',
+    'Ponto de TV/Internet'
+  ],
+  'Hall de Entrada': ['Piso', 'Rodapé', 'Parede', 'Teto', 'Porta de Entrada', 'Interfone', 'Interruptores e Tomadas', 'Luminária'],
+  Lavabo: ['Piso', 'Parede', 'Teto', 'Porta', 'Vaso Sanitário', 'Pia', 'Torneira', 'Espelho', 'Luminária', 'Ventilação'],
+  'Circulação / Corredor': ['Piso', 'Rodapé', 'Parede', 'Teto', 'Interruptores e Tomadas', 'Luminária'],
+
+  // ---- Ambientes Privativos ----
+  Quarto: [
+    'Piso',
+    'Rodapé',
+    'Parede',
+    'Teto',
+    'Porta',
+    'Janela',
+    'Interruptores e Tomadas',
+    'Luminária',
+    'Armário Embutido'
+  ],
+  Suíte: [
+    'Piso',
+    'Rodapé',
+    'Parede',
+    'Teto',
+    'Porta',
+    'Janela',
+    'Interruptores e Tomadas',
+    'Luminária',
+    'Armário Embutido',
+    'Ar-condicionado'
+  ],
+  Closet: ['Piso', 'Parede', 'Teto', 'Porta', 'Prateleiras/Cabideiros', 'Iluminação', 'Interruptores e Tomadas'],
+  Escritório: [
+    'Piso',
+    'Rodapé',
+    'Parede',
+    'Teto',
+    'Porta',
+    'Janela',
+    'Interruptores e Tomadas',
+    'Luminária',
+    'Ponto de Internet'
+  ],
+  'Quarto de Hóspedes': [
+    'Piso',
+    'Rodapé',
+    'Parede',
+    'Teto',
+    'Porta',
+    'Janela',
+    'Interruptores e Tomadas',
+    'Luminária',
+    'Armário'
+  ],
+
+  // ---- Cozinha e Serviços ----
+  Cozinha: [
+    'Piso',
+    'Parede/Revestimento',
+    'Teto',
+    'Porta',
+    'Janela',
+    'Bancada',
+    'Pia',
+    'Torneira',
+    'Armários',
+    'Interruptores e Tomadas',
+    'Luminária',
+    'Coifa/Exaustor'
+  ],
+  Copa: ['Piso', 'Parede', 'Teto', 'Porta', 'Bancada', 'Armários', 'Interruptores e Tomadas', 'Luminária'],
+  Despensa: ['Piso', 'Parede', 'Teto', 'Porta', 'Prateleiras', 'Iluminação'],
+  'Área de Serviço': [
+    'Piso',
+    'Parede',
+    'Teto',
+    'Tanque',
+    'Torneira',
+    'Ponto para Máquina de Lavar',
+    'Varal',
+    'Interruptores e Tomadas',
+    'Luminária'
+  ],
+  Lavanderia: [
+    'Piso',
+    'Parede',
+    'Teto',
+    'Bancada',
+    'Tanque',
+    'Torneira',
+    'Ponto para Máquina de Lavar',
+    'Interruptores e Tomadas',
+    'Luminária'
+  ],
+  'Banheiro de Serviço': [
+    'Piso',
+    'Parede',
+    'Teto',
+    'Porta',
+    'Vaso Sanitário',
+    'Pia',
+    'Torneira',
+    'Chuveiro',
+    'Luminária',
+    'Ventilação'
+  ],
+  'Quarto de Serviço': ['Piso', 'Rodapé', 'Parede', 'Teto', 'Porta', 'Janela', 'Interruptores e Tomadas', 'Luminária'],
+
+  // ---- Banheiros ----
+  'Banheiro Social': [
+    'Piso',
+    'Parede/Revestimento',
+    'Teto',
+    'Porta',
+    'Vaso Sanitário',
+    'Pia',
+    'Torneira',
+    'Box/Chuveiro',
+    'Espelho',
+    'Luminária',
+    'Ventilação'
+  ],
+  'Banheiro Suíte': [
+    'Piso',
+    'Parede/Revestimento',
+    'Teto',
+    'Porta',
+    'Vaso Sanitário',
+    'Pia',
+    'Torneira',
+    'Box/Chuveiro',
+    'Espelho',
+    'Luminária',
+    'Ventilação',
+    'Registro de Água Quente'
+  ],
+  'Banheiro Externo': ['Piso', 'Parede', 'Teto', 'Porta', 'Vaso Sanitário', 'Pia', 'Torneira', 'Chuveiro', 'Luminária'],
+
+  // ---- Áreas Externas e Lazer ----
+  Varanda: ['Piso', 'Guarda-Corpo', 'Fechamento de Vidro', 'Teto/Cobertura', 'Iluminação', 'Interruptores e Tomadas'],
+  'Varanda Gourmet': ['Bancada', 'Churrasqueira', 'Pia', 'Coifa', 'Piso', 'Iluminação'],
+  Sacada: ['Piso', 'Guarda-Corpo', 'Iluminação'],
+  Terraço: ['Piso', 'Guarda-Corpo', 'Cobertura', 'Iluminação', 'Ralo'],
+  Quintal: ['Portão', 'Gramado', 'Muro', 'Iluminação Externa'],
+  Jardim: ['Gramado', 'Sistema de Irrigação', 'Iluminação Externa', 'Muro/Cerca'],
+  Piscina: ['Revestimento', 'Borda', 'Filtro/Bomba', 'Iluminação', 'Portão de Segurança'],
+  'Área de Churrasqueira': ['Churrasqueira', 'Bancada', 'Piso', 'Iluminação', 'Coifa/Exaustor'],
+  Garagem: ['Piso', 'Portão', 'Iluminação', 'Interruptores e Tomadas', 'Teto/Cobertura'],
+  'Vaga de Garagem': ['Piso', 'Demarcação', 'Iluminação'],
+
+  // ---- Comerciais e Apoio ----
+  Recepção: ['Piso', 'Parede', 'Teto', 'Porta', 'Balcão', 'Iluminação', 'Interruptores e Tomadas', 'Ponto de Internet'],
+  'Sala de Reunião': [
+    'Piso',
+    'Parede',
+    'Teto',
+    'Porta',
+    'Janela',
+    'Iluminação',
+    'Interruptores e Tomadas',
+    'Ponto de Internet/TV'
+  ],
+  Galpão: ['Piso', 'Portão', 'Estrutura/Telhado', 'Iluminação', 'Instalação Elétrica', 'Ventilação'],
+  Loja: ['Piso', 'Vitrine', 'Porta', 'Iluminação', 'Interruptores e Tomadas', 'Teto'],
+  Mezanino: ['Piso', 'Guarda-Corpo', 'Escada de Acesso', 'Iluminação'],
+  'Depósito / Box': ['Piso', 'Porta/Portão', 'Prateleiras', 'Iluminação']
+}
+
+// Catálogo genérico — usado como ponto de partida quando o ambiente
+// escolhido é "Outro Ambiente (Personalizado)" ou quando o nome
+// digitado não bate com nenhuma chave de ITENS_POR_AMBIENTE (ex.:
+// "Quarto 2", variação de um nome já existente).
+export const ITENS_PADRAO_GENERICO = [
   'Piso',
   'Rodapé',
   'Parede',
@@ -17,12 +272,13 @@ export const ITENS_PADRAO = [
   'Porta',
   'Janela',
   'Interruptores e Tomadas',
-  'Luminária',
-  'Armário',
-  'Bancada da Pia',
-  'Torneira',
-  'Tanque'
+  'Luminária'
 ]
+
+/** Catálogo de itens de um ambiente específico, com fallback genérico. */
+export function getCatalogoItensDoAmbiente(nomeAmbiente) {
+  return ITENS_POR_AMBIENTE[nomeAmbiente] || ITENS_PADRAO_GENERICO
+}
 
 // Bucket de Storage onde ficam as fotos do checklist e a assinatura
 // digital de encerramento.

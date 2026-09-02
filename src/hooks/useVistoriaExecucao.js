@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { FOTOS_BUCKET, ITENS_PADRAO } from '../lib/vistoriaExecucao'
+import { FOTOS_BUCKET, getCatalogoItensDoAmbiente } from '../lib/vistoriaExecucao'
 
 // IDs "locais" (fallback): usados quando o INSERT no Supabase falha em
 // campo (sem conexão, coluna divergente, etc.) e ainda assim
@@ -221,7 +221,11 @@ export function useVistoriaExecucao(vistoriaId) {
         })
       )
 
-      const linhasItens = ITENS_PADRAO.map((item) => ({
+      // Catálogo específico deste ambiente (ex.: "Varanda" e "Cozinha"
+      // têm listas de itens diferentes) — com fallback genérico pra
+      // nomes personalizados que não batem com nenhum ambiente padrão.
+      const catalogoItens = getCatalogoItensDoAmbiente(nome)
+      const linhasItens = catalogoItens.map((item) => ({
         ambiente_id: ambienteRow.id,
         nome: item,
         item,

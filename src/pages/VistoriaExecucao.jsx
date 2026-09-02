@@ -13,7 +13,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import Modal from '../components/Modal'
 import StatusBadge from '../components/StatusBadge'
 import SuccessBanner from '../components/SuccessBanner'
-import { AMBIENTES_PADRAO, buildMapsUrl, montarNomeArquivoLaudo } from '../lib/vistoriaExecucao'
+import { AMBIENTE_PERSONALIZADO, AMBIENTES_GRUPOS, AMBIENTES_PADRAO, buildMapsUrl, getCatalogoItensDoAmbiente, montarNomeArquivoLaudo } from '../lib/vistoriaExecucao'
 import { gerarLaudoPdfBlob } from '../lib/laudoPdf'
 
 export default function VistoriaExecucao() {
@@ -77,6 +77,23 @@ export default function VistoriaExecucao() {
     () => ambientes.find((a) => a.id === activeAmbienteId) || null,
     [ambientes, activeAmbienteId]
   )
+
+  // Sugestões do catálogo pro "Pesquise aqui" de Adicionar Item: pega
+  // o catálogo específico deste ambiente, tira quem já foi adicionado,
+  // e filtra pelo texto digitado (se houver).
+  const sugestoesItens = useMemo(() => {
+    if (!activeAmbiente) return []
+    const catalogo = getCatalogoItensDoAmbiente(activeAmbiente.ambiente || activeAmbiente.nome)
+    const nomesExistentes = new Set(
+      (activeAmbiente.vistoria_itens || []).map((it) => (it.item || it.nome || '').trim().toLowerCase())
+    )
+    const termo = novoItemNome.trim().toLowerCase()
+    return catalogo.filter((nomeItem) => {
+      if (nomesExistentes.has(nomeItem.trim().toLowerCase())) return false
+      if (!termo) return true
+      return nomeItem.toLowerCase().includes(termo)
+    })
+  }, [activeAmbiente, novoItemNome])
 
   // Lista achatada, em ordem, de todas as fotos de todos os
   // ambientes/itens — cada foto carrega de onde veio (ambienteId,
@@ -180,7 +197,7 @@ export default function VistoriaExecucao() {
   }
 
   const handleAddAmbiente = async () => {
-    const nome = novoAmbiente === 'Outro' ? customAmbiente.trim() : novoAmbiente
+    const nome = novoAmbiente === AMBIENTE_PERSONALIZADO ? customAmbiente.trim() : novoAmbiente
     if (!nome) {
       setAddAmbienteError('Informe o nome do ambiente.')
       return
@@ -208,6 +225,19 @@ export default function VistoriaExecucao() {
     try {
       await addItemCustom(activeAmbienteId, nome)
       setNovoItemNome('')
+    } catch (err) {
+      setAddItemError(err.message || 'Erro ao adicionar item.')
+    } finally {
+      setAddingItem(false)
+    }
+  }
+
+  /** Adiciona diretamente um item sugerido do catálogo (clique no "+" da pílula). */
+  const handleAddItemDoCatalogo = async (nomeItem) => {
+    setAddItemError('')
+    setAddingItem(true)
+    try {
+      await addItemCustom(activeAmbienteId, nomeItem)
     } catch (err) {
       setAddItemError(err.message || 'Erro ao adicionar item.')
     } finally {
@@ -356,25 +386,41 @@ export default function VistoriaExecucao() {
 
           {!isEncerrada && (
             <div className="card space-y-2 p-4">
-              <p className="label-field !mb-0">Adicionar outro item</p>
+              <p className="label-field !mb-0">Adicionar item</p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <input
                   className="input-field"
-                  placeholder="Ex: Box do banheiro, Persiana..."
+                  placeholder="Pesquise aqui... (ou digite um item personalizado)"
                   value={novoItemNome}
                   onChange={(e) => setNovoItemNome(e.target.value)}
                 />
                 <button
                   type="button"
                   onClick={handleAddItemCustom}
-                  disabled={addingItem}
+                  disabled={addingItem || !novoItemNome.trim()}
                   className="btn-primary shrink-0"
                 >
                   {addingItem ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-                  Adicionar Outro Item
+                  Adicionar
                 </button>
               </div>
               {addItemError && <p className="text-xs font-medium text-red-500">{addItemError}</p>}
+
+              {sugestoesItens.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {sugestoesItens.map((nomeItem) => (
+                    <button
+                      key={nomeItem}
+                      type="button"
+                      onClick={() => handleAddItemDoCatalogo(nomeItem)}
+                      disabled={addingItem}
+                      className="flex items-center gap-1 rounded-full border border-brand-border px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-brand-cream disabled:opacity-50"
+                    >
+                      <Plus size={11} /> {nomeItem}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -454,20 +500,24 @@ export default function VistoriaExecucao() {
               <p className="label-field !mb-0">Adicionar ambiente</p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <select
-                  className="input-field sm:max-w-[220px]"
+                  className="input-field sm:max-w-[260px]"
                   value={novoAmbiente}
                   onChange={(e) => setNovoAmbiente(e.target.value)}
                 >
-                  {AMBIENTES_PADRAO.map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
+                  {AMBIENTES_GRUPOS.map((grupo) => (
+                    <optgroup key={grupo.grupo} label={grupo.grupo}>
+                      {grupo.ambientes.map((a) => (
+                        <option key={a} value={a}>
+                          {a}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
-                {novoAmbiente === 'Outro' && (
+                {novoAmbiente === AMBIENTE_PERSONALIZADO && (
                   <input
                     className="input-field"
-                    placeholder="Nome do ambiente (ex: Quarto 2)"
+                    placeholder="Nome do ambiente (ex: Quarto 3, Adega...)"
                     value={customAmbiente}
                     onChange={(e) => setCustomAmbiente(e.target.value)}
                   />
