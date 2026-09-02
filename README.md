@@ -163,7 +163,17 @@ Atualizada em `ESTADOS_ITEM` (`src/lib/vistoriaExecucao.js`) — fonte única us
 
 Antes, "Ótimo" e "Bom" usavam dois tons de verde bem parecidos (`#16A34A` e `#65A30D`) — difícil de distinguir à primeira vista. A troca pra azul/verde deixa as quatro condições visualmente inconfundíveis.
 
-### Legibilidade, proporção e quebra de página no laudo
+### Alinhamento visual exato com a referência (cores, divisórias, badge)
+
+Ajustei valores específicos pra bater exatamente com uma imagem de referência do laudo em HTML que você anexou:
+
+- **Faixa do ambiente**: cor exata `#2b1e1a` (era `brand-900` = `#261912`, próximo mas não idêntico) — aplicada só nessa faixa, via `style` inline no HTML e `backgroundColor: '#2b1e1a'` no PDF, sem alterar o token `brand-900` usado no resto do app. Padding `16px 10px` (HTML: `px-4 py-2.5`) e cantos em `rounded-lg` (8px).
+- **Título do item**: de `text-base` pra `text-lg`, mais destacado.
+- **Divisória entre itens**: cor exata `#e5e7eb` (era `brand-border` = `#bfb8ae`, um tom quente da paleta da marca — a referência pedia um cinza frio específico). No PDF, a divisória virou um elemento próprio (`itemDivisoria`), inserido no fluxo normal *depois* da grade de fotos — não é mais uma borda no container que engloba as fotos, porque esse container pode atravessar página, e uma borda ali podia render de forma estranha no ponto de quebra.
+- **Badge do carimbo**: fundo branco sólido (`#ffffff`, era `rgba(255,255,255,0.88)` translúcido) com uma borda fina `#e5e7eb`, pra bater com o visual "cartão bem definido" da referência.
+- **Fotos**: `aspect-[4/3]` explícito no HTML (era `h-24 w-32` — resultado idêntico, 128×96px, mas agora escrito como proporção literal, como pedido) e `borderRadius: 6` no PDF (era `2`, cantos quase retos).
+
+
 
 - **Fontes maiores (2ª rodada)**: aumentei de novo — `itemNome` 10.5→12pt, `itemCondicaoTexto`/`itemFuncionamentoTexto` 9.5→10.5pt, `itemObservacao` 9→9.5pt no PDF; no HTML, "Condição"/"Funcionamento"/"Observações" foram de `text-sm` pra `text-base`.
 - **Status da condição em destaque**: o texto "Condição: {Ótimo/Bom/Regular/Ruim}" é negrito e usa a mesma cor da bolinha.

@@ -161,12 +161,13 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 6,
     color: '#ffffff',
-    backgroundColor: CORES.brand900,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    borderRadius: 2
+    backgroundColor: '#2b1e1a',
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 6
   },
   itemBlocoComFotos: { marginBottom: 12 },
+  itemDivisoria: { borderBottomWidth: 1, borderBottomColor: '#e5e7eb', marginTop: 10 },
   itemNome: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: CORES.brand900, marginBottom: 3 },
   itemCondicaoRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   itemDot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
@@ -180,11 +181,11 @@ const styles = StyleSheet.create({
   photosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 5 },
   photoBox: { width: 160, marginRight: 8, marginBottom: 8 },
   photoFrame: { position: 'relative', width: 160, height: 120 },
-  photo: { width: 160, height: 120, objectFit: 'cover', borderRadius: 2, borderWidth: 1, borderColor: CORES.border },
+  photo: { width: 160, height: 120, objectFit: 'cover', borderRadius: 6, borderWidth: 1, borderColor: CORES.border },
   photoIndisponivel: {
     width: 160,
     height: 120,
-    borderRadius: 2,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: CORES.border,
     backgroundColor: CORES.cream,
@@ -193,15 +194,17 @@ const styles = StyleSheet.create({
   },
   photoIndisponivelTexto: { fontSize: 6, color: CORES.brand700, textAlign: 'center', paddingHorizontal: 6 },
   // Carimbo de data/hora sobreposto no canto superior esquerdo de
-  // cada miniatura — fundo branco translúcido, texto escuro, sempre
-  // por cima da imagem (zIndex).
+  // cada miniatura — fundo branco sólido com borda fina, texto
+  // escuro, sempre por cima da imagem (zIndex).
   carimboDataHora: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: 6,
+    left: 6,
     zIndex: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.88)',
-    borderRadius: 3,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 4,
     paddingVertical: 2,
     paddingHorizontal: 5
   },
@@ -668,6 +671,11 @@ function AmbienteSecao({ ambiente, numero }) {
                 })}
               </View>
             )}
+
+            {/* Divisória fina entre itens — participa do fluxo normal
+                (não é wrap={false}), então não interfere com a grade
+                de fotos podendo atravessar página. */}
+            <View style={styles.itemDivisoria} />
           </View>
         )
       })}

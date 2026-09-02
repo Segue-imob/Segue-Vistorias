@@ -163,18 +163,21 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
               const funcLabel = labelFuncionamento(item.funcionamento)
               const primeiroItem = itemIndex === 0
               return (
-                <div key={item.id} className="border-b border-brand-border/60 pb-3 last:border-0 last:pb-0">
+                <div key={item.id} className="border-b border-[#e5e7eb] pb-4 last:border-0 last:pb-0">
                   {/* Bloco de texto (título do ambiente só no primeiro
                       item + nome do item + condição + observação)
                       nunca quebra ao imprimir — só a grade de fotos
                       abaixo pode fluir pra página seguinte. */}
                   <div className="break-inside-avoid print:break-inside-avoid">
                     {primeiroItem && (
-                      <p className="mb-3 rounded-md bg-brand-900 px-3 py-1.5 text-sm font-bold text-white">
+                      <p
+                        className="mb-3 rounded-lg px-4 py-2.5 text-sm font-bold text-white"
+                        style={{ backgroundColor: '#2b1e1a' }}
+                      >
                         {ambIndex + 1}. {ambiente.ambiente || ambiente.nome}
                       </p>
                     )}
-                    <p className="text-base font-bold text-brand-900">
+                    <p className="text-lg font-bold text-brand-900">
                       {ambIndex + 1}.{itemIndex + 1} {nomeItem}
                     </p>
                     <div className="mt-1.5 flex items-center gap-2 text-base text-brand-900">
@@ -191,7 +194,7 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
                       )}
                       {funcLabel && <span className="text-base text-slate-500">· Funcionamento: {funcLabel}</span>}
                     </div>
-                    {item.observacao && <p className="mt-1.5 pl-5 text-base text-slate-600">{item.observacao}</p>}
+                    {item.observacao && <p className="mt-1.5 pl-5 text-base text-slate-500">{item.observacao}</p>}
                   </div>
                   {(item.vistoria_fotos || []).length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2 pl-4">
@@ -206,11 +209,11 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
                               itemNome: nomeItem
                             })
                           }
-                          className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg border border-brand-border break-inside-avoid"
+                          className="relative aspect-[4/3] w-32 shrink-0 overflow-hidden rounded-lg border border-brand-border break-inside-avoid"
                         >
                           <img src={foto.url} alt="Foto do item" className="h-full w-full object-cover" />
                           {foto.created_at && (
-                            <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-slate-900 shadow-sm">
+                            <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 rounded border border-[#e5e7eb] bg-white px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-slate-900 shadow-sm">
                               {formatarCarimboFoto(foto.created_at)}
                             </span>
                           )}
