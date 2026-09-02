@@ -167,21 +167,23 @@ const styles = StyleSheet.create({
     borderRadius: 2
   },
   itemBlocoComFotos: { marginBottom: 12 },
-  itemNome: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: CORES.brand900, marginBottom: 2 },
-  itemCondicaoRow: { flexDirection: 'row', alignItems: 'center' },
-  itemDot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 5 },
-  itemCondicaoTexto: { fontSize: 8.5, color: CORES.brand900 },
-  itemObservacao: { fontSize: 8, color: CORES.brand700, marginTop: 2, marginLeft: 12, lineHeight: 1.4 },
+  itemNome: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: CORES.brand900, marginBottom: 3 },
+  itemCondicaoRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
+  itemDot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
+  itemCondicaoTexto: { fontSize: 10.5, color: CORES.brand900 },
+  itemCondicaoStatus: { fontFamily: 'Helvetica-Bold' },
+  itemFuncionamentoTexto: { fontSize: 10.5, color: CORES.brand700 },
+  itemObservacao: { fontSize: 9.5, color: CORES.brand700, marginTop: 3, marginLeft: 13, lineHeight: 1.45 },
 
   // ---- Grade de fotos (até 3 por linha), agora exibida logo abaixo
   // de cada item, com as fotos exclusivas daquele item ----
   photosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 5 },
-  photoBox: { width: 158, marginRight: 8, marginBottom: 8 },
-  photoFrame: { position: 'relative', width: 158, height: 118 },
-  photo: { width: 158, height: 118, objectFit: 'cover', borderRadius: 2, borderWidth: 1, borderColor: CORES.border },
+  photoBox: { width: 160, marginRight: 8, marginBottom: 8 },
+  photoFrame: { position: 'relative', width: 160, height: 120 },
+  photo: { width: 160, height: 120, objectFit: 'cover', borderRadius: 2, borderWidth: 1, borderColor: CORES.border },
   photoIndisponivel: {
-    width: 158,
-    height: 118,
+    width: 160,
+    height: 120,
     borderRadius: 2,
     borderWidth: 1,
     borderColor: CORES.border,
@@ -582,31 +584,57 @@ function AmbienteSecao({ ambiente, numero }) {
 
   return (
     <View>
-      <Text style={styles.ambienteTitulo}>
-        {numero}. {nomeAmbiente}
-      </Text>
-
       {itens.map((item, index) => {
         const meta = getEstadoItemMeta(item.estado)
         const nomeItem = item.item || item.nome || 'Item'
         const numeroItem = `${numero}.${index + 1}`
         const fotosDoItem = item._fotosParaPdf || []
+        const primeiroItem = index === 0
 
         return (
-          <View key={item.id} style={styles.itemBlocoComFotos} wrap={false}>
-            <Text style={styles.itemNome}>
-              {numeroItem} {nomeItem}
-            </Text>
-            <View style={styles.itemCondicaoRow}>
-              <View style={[styles.itemDot, { backgroundColor: meta ? meta.color : CORES.border }]} />
-              <Text style={styles.itemCondicaoTexto}>
-                {meta ? `Condição: ${meta.label}` : 'Não avaliado'}
-                {funcionamentoFoiSelecionado(item.funcionamento)
-                  ? `   ·   Funcionamento: ${labelFuncionamento(item.funcionamento)}`
-                  : ''}
+          <View key={item.id} style={styles.itemBlocoComFotos}>
+            {/* Bloco de TEXTO (título do ambiente, só no primeiro item
+                + nome do item + condição/funcionamento + observação)
+                nunca quebra de página — react-pdf empurra o bloco
+                inteiro pra página seguinte se não couber, em vez de
+                cortar no meio. As fotos ficam FORA desse wrap={false},
+                de propósito: só elas podem fluir pra página seguinte
+                se não houver espaço, sem arrastar o texto junto. */}
+            <View wrap={false}>
+              {primeiroItem && (
+                <Text style={styles.ambienteTitulo} minPresenceAhead={40}>
+                  {numero}. {nomeAmbiente}
+                </Text>
+              )}
+              <Text style={styles.itemNome} minPresenceAhead={20}>
+                {numeroItem} {nomeItem}
               </Text>
+              <View style={styles.itemCondicaoRow}>
+                <View style={[styles.itemDot, { backgroundColor: meta ? meta.color : CORES.border }]} />
+                {/* Texto de Condição e o de Funcionamento como <Text>
+                    IRMÃOS, não um aninhado dentro do outro — texto
+                    aninhado ("rich text") é um ponto conhecido de
+                    imprecisão no cálculo de altura do
+                    @react-pdf/renderer, e foi exatamente isso que
+                    causava o item pular pra outra página mesmo
+                    sobrando espaço em branco na atual. */}
+                <Text
+                  style={
+                    meta
+                      ? [styles.itemCondicaoTexto, styles.itemCondicaoStatus, { color: meta.color }]
+                      : styles.itemCondicaoTexto
+                  }
+                >
+                  {meta ? `Condição: ${meta.label}` : 'Não avaliado'}
+                </Text>
+                {funcionamentoFoiSelecionado(item.funcionamento) && (
+                  <Text style={styles.itemFuncionamentoTexto}>
+                    {'   ·   '}Funcionamento: {labelFuncionamento(item.funcionamento)}
+                  </Text>
+                )}
+              </View>
+              {item.observacao && <Text style={styles.itemObservacao}>{item.observacao}</Text>}
             </View>
-            {item.observacao && <Text style={styles.itemObservacao}>{item.observacao}</Text>}
 
             {/* Fotos EXCLUSIVAS deste item, logo em seguida — se não
                 houver nenhuma, só a descrição acima e segue pro

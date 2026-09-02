@@ -368,6 +368,12 @@ export default function VistoriaExecucao() {
           </button>
 
           <div className="space-y-3">
+            {(activeAmbiente.vistoria_itens || []).length === 0 && (
+              <div className="card p-6 text-center text-sm text-slate-500">
+                Nenhum item adicionado ainda neste ambiente.
+                {!isEncerrada && ' Use a busca abaixo para escolher ou digitar o primeiro item.'}
+              </div>
+            )}
             {(activeAmbiente.vistoria_itens || []).map((item) => (
               <ItemCard
                 key={item.id}

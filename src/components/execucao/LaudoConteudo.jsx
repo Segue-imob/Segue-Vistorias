@@ -157,27 +157,42 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
       ) : (
         ambientesParaExibir.map((ambiente, ambIndex) => (
           <div key={ambiente.id} className="card space-y-4 p-4">
-            <p className="rounded-md bg-brand-900 px-3 py-1.5 text-sm font-bold text-white">
-              {ambIndex + 1}. {ambiente.ambiente || ambiente.nome}
-            </p>
             {(ambiente.vistoria_itens || []).map((item, itemIndex) => {
               const meta = getEstadoItemMeta(item.estado)
               const nomeItem = item.item || item.nome
               const funcLabel = labelFuncionamento(item.funcionamento)
+              const primeiroItem = itemIndex === 0
               return (
                 <div key={item.id} className="border-b border-brand-border/60 pb-3 last:border-0 last:pb-0">
-                  <p className="text-sm font-bold text-brand-900">
-                    {ambIndex + 1}.{itemIndex + 1} {nomeItem}
-                  </p>
-                  <div className="mt-1 flex items-center gap-1.5 text-sm text-brand-900">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: meta ? meta.color : '#bfb8ae' }}
-                    />
-                    {meta ? `Condição: ${meta.label}` : 'Não avaliado'}
-                    {funcLabel && <span className="text-slate-500">· Funcionamento: {funcLabel}</span>}
+                  {/* Bloco de texto (título do ambiente só no primeiro
+                      item + nome do item + condição + observação)
+                      nunca quebra ao imprimir — só a grade de fotos
+                      abaixo pode fluir pra página seguinte. */}
+                  <div className="break-inside-avoid print:break-inside-avoid">
+                    {primeiroItem && (
+                      <p className="mb-3 rounded-md bg-brand-900 px-3 py-1.5 text-sm font-bold text-white">
+                        {ambIndex + 1}. {ambiente.ambiente || ambiente.nome}
+                      </p>
+                    )}
+                    <p className="text-base font-bold text-brand-900">
+                      {ambIndex + 1}.{itemIndex + 1} {nomeItem}
+                    </p>
+                    <div className="mt-1.5 flex items-center gap-2 text-base text-brand-900">
+                      <span
+                        className="h-3 w-3 shrink-0 rounded-full"
+                        style={{ backgroundColor: meta ? meta.color : '#bfb8ae' }}
+                      />
+                      {meta ? (
+                        <span className="font-bold" style={{ color: meta.color }}>
+                          Condição: {meta.label}
+                        </span>
+                      ) : (
+                        'Não avaliado'
+                      )}
+                      {funcLabel && <span className="text-base text-slate-500">· Funcionamento: {funcLabel}</span>}
+                    </div>
+                    {item.observacao && <p className="mt-1.5 pl-5 text-base text-slate-600">{item.observacao}</p>}
                   </div>
-                  {item.observacao && <p className="mt-1 pl-4 text-xs text-slate-500">{item.observacao}</p>}
                   {(item.vistoria_fotos || []).length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2 pl-4">
                       {(item.vistoria_fotos || []).map((foto) => (
@@ -191,7 +206,7 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
                               itemNome: nomeItem
                             })
                           }
-                          className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg border border-brand-border"
+                          className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg border border-brand-border break-inside-avoid"
                         >
                           <img src={foto.url} alt="Foto do item" className="h-full w-full object-cover" />
                           {foto.created_at && (

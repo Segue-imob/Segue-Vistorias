@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { FOTOS_BUCKET, getCatalogoItensDoAmbiente } from '../lib/vistoriaExecucao'
+import { FOTOS_BUCKET } from '../lib/vistoriaExecucao'
 
 // IDs "locais" (fallback): usados quando o INSERT no Supabase falha em
 // campo (sem conexão, coluna divergente, etc.) e ainda assim
@@ -221,58 +221,14 @@ export function useVistoriaExecucao(vistoriaId) {
         })
       )
 
-      // Catálogo específico deste ambiente (ex.: "Varanda" e "Cozinha"
-      // têm listas de itens diferentes) — com fallback genérico pra
-      // nomes personalizados que não batem com nenhum ambiente padrão.
-      const catalogoItens = getCatalogoItensDoAmbiente(nome)
-      const linhasItens = catalogoItens.map((item) => ({
-        ambiente_id: ambienteRow.id,
-        nome: item,
-        item,
-        estado: null,
-        status: null
-      }))
-
-      let itensFinal
-      if (!ambientePersistido) {
-        // Ambiente já não foi salvo — nem tenta inserir os itens no
-        // banco (o ambiente_id nem existe lá); monta tudo localmente.
-        itensFinal = linhasItens.map((linha) => ({
-          id: buildLocalId('item'),
-          ...linha,
-          observacao: null,
-          created_at: new Date().toISOString(),
-          vistoria_fotos: [],
-          _naoSincronizado: true
-        }))
-      } else {
-        const { data: itensData, error: itensErr } = await supabase
-          .from('vistoria_itens')
-          .insert(linhasItens)
-          .select('*')
-        if (itensErr) {
-          console.error(
-            '[useVistoriaExecucao] Erro do Supabase ao inserir itens padrão:',
-            itensErr.message,
-            itensErr
-          )
-          itensFinal = linhasItens.map((linha) => ({
-            id: buildLocalId('item'),
-            ...linha,
-            observacao: null,
-            created_at: new Date().toISOString(),
-            vistoria_fotos: [],
-            _naoSincronizado: true
-          }))
-        } else {
-          itensFinal = (itensData || []).map((it) => ({ ...it, vistoria_fotos: [] }))
-        }
-      }
-
+      // O ambiente nasce SEM nenhum item pré-carregado — nada de
+      // inserir automaticamente um catálogo padrão aqui. O
+      // vistoriador escolhe cada item pela busca/catálogo (ou texto
+      // livre) dentro do próprio ambiente, item a item, sob demanda.
       const novoAmbiente = {
         ...ambienteRow,
         _naoSincronizado: !ambientePersistido,
-        vistoria_itens: itensFinal
+        vistoria_itens: []
       }
       setAmbientes((prev) => [...prev, novoAmbiente])
       return novoAmbiente
