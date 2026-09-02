@@ -317,6 +317,21 @@ Ao abrir uma vistoria de tipo **Saída** que ainda não tem nenhum ambiente cria
 
 **Decisão de integridade de dados, importante**: **Condição e Funcionamento NÃO são copiados** — cada item entra na Saída com `estado`/`funcionamento` em branco, exatamente como um item novo criado do zero. Copiar a avaliação antiga da Entrada faria o vistoriador poder esquecer de reavaliar um item, e a Saída acabaria herdando silenciosamente uma condição que era de outra visita — a mesma lógica por trás de nunca pré-preencher um item novo como "Bom" (ver seção de Execução de vistoria mais abaixo). O que **é** copiado — nome do ambiente/item, a observação antiga (prefixada com "Referência (Vistoria de Entrada): ..." pra deixar claro que não é da visita atual) e as fotos antigas — é material de referência/comparação, não uma avaliação já pronta. O vistoriador ainda precisa tocar em Ótimo/Bom/Regular/Ruim e Sim/Não pra cada item, e pode anexar fotos novas ao lado das antigas pra comparação lado a lado.
 
+### Laudo comparativo — fotos de Entrada e Saída nunca misturadas na mesma grade
+
+Cada foto copiada da Entrada é marcada com `vistoria_fotos.eh_referencia_entrada = true` — essa marcação **não existia** antes desta entrega (a importação Entrada→Saída, construída numa entrega anterior, não distinguia origem nenhuma), então uma vistoria de Saída que já importou fotos *antes* desta correção não tem como diferenciar retroativamente quais eram de referência. A vistoria de Saída também grava `vistorias.entrada_referencia_id`, apontando pra qual Entrada foi usada — assim o laudo sabe de qual vistoria buscar a data de finalização pra mostrar na tag.
+
+Dentro de cada item do laudo (PDF e HTML), as fotos são separadas em dois grupos, cada um com sua própria tag colorida e nunca na mesma grade:
+
+- **"VISTORIA DE ENTRADA ({data})"** — fundo azul claro, texto azul escuro. Fotos com `eh_referencia_entrada = true`.
+- **"VISTORIA DE SAÍDA ({data})"** — fundo terracota (`#a64324`, a cor da marca), texto branco. Todas as outras fotos do item (tiradas de verdade durante a vistoria atual, seja ela de Entrada, Saída ou Conferência — o rótulo "SAÍDA" só faz sentido quando o item também tem fotos de referência da Entrada ao lado; quando não tem nenhuma foto de Entrada, a seção de Saída nem aparece com tag nenhuma, é só a grade normal).
+
+Quando um item tem fotos das duas etapas, uma divisória fina separa os dois blocos. Quando só tem de uma etapa (a maioria dos itens, na prática — só os copiados via importação têm fotos de "Entrada"), só aquela seção aparece, sem tag nem divisória desnecessária.
+
+**Sobre o emoji 📸 nas tags**: incluído na versão HTML (o navegador renderiza emoji nativamente, sem risco). **Omitido no PDF** — as fontes padrão do `@react-pdf/renderer` (Helvetica) não têm glifos de emoji; incluir o caractere ali arriscava aparecer como um quadrado vazio ou espaço em branco no lugar do 📸. O texto da tag no PDF é só "VISTORIA DE ENTRADA (...)"/"VISTORIA DE SAÍDA (...)", sem o emoji.
+
+**Reaproveitamento de código**: a busca "qual Entrada esta vistoria referencia" (`buscarEntradaReferencia()`, em `laudoData.js`) é compartilhada entre `useVistoriaExecucao` (usada quando o próprio vistoriador gera o PDF pela tela de execução) e `buscarDadosParaLaudo` (usada pelo modal/página de laudo na lista do Administrador) — evita duplicar essa consulta em dois lugares.
+
 
 
 ## Cadastro de imóvel (dentro do agendamento de vistoria)

@@ -170,6 +170,29 @@ const styles = StyleSheet.create({
   },
   itemBlocoComFotos: { marginBottom: 12 },
   itemDivisoria: { borderBottomWidth: 1, borderBottomColor: '#e5e7eb', marginTop: 10 },
+
+  // ---- Laudo comparativo (Entrada -> Saída): tags coloridas
+  // identificando de qual etapa vem cada grupo de fotos ----
+  etapaBloco: { marginTop: 6 },
+  etapaTagEntrada: {
+    backgroundColor: '#dbeafe',
+    borderRadius: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 4
+  },
+  etapaTagEntradaTexto: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#1e40af' },
+  etapaTagSaida: {
+    backgroundColor: '#fde4d0',
+    borderRadius: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 4
+  },
+  etapaTagSaidaTexto: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: CORES.accent },
+  etapaDivisoria: { borderBottomWidth: 1, borderBottomColor: '#e5e7eb', marginVertical: 8 },
   itemNome: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: CORES.brand900, marginBottom: 3 },
   itemCondicaoRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   itemDot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
@@ -638,9 +661,55 @@ function ResumoExecutivo({ vistoria, ambientes }) {
   )
 }
 
-function AmbienteSecao({ ambiente, numero }) {
+/**
+ * Grade de fotos de um grupo (Entrada OU Saída dentro de um item) —
+ * em linhas explícitas de até 3, cada linha protegida contra quebra
+ * de página. Extraída como função própria porque, no laudo
+ * comparativo de uma vistoria de Saída, ela é chamada até duas vezes
+ * por item (uma pro grupo de Entrada, outra pro de Saída).
+ */
+function GradeDeFotos({ fotos, nomeItem }) {
+  if (fotos.length === 0) return null
+  return (
+    <View>
+      {agruparEmLinhas(fotos, 3).map((linha, linhaIndex) => (
+        <View key={linhaIndex} style={styles.photosRow} wrap={false}>
+          {linha.map((foto) => {
+            const carimbo = formatarCarimboFoto(foto.created_at)
+            return (
+              <View key={foto.id} style={styles.photoBox}>
+                <View style={styles.photoFrame}>
+                  {foto._pdfSrc ? (
+                    <Link src={foto.url}>
+                      <Image src={foto._pdfSrc} style={styles.photo} />
+                    </Link>
+                  ) : (
+                    <Link src={foto.url}>
+                      <View style={styles.photoIndisponivel}>
+                        <Text style={styles.photoIndisponivelTexto}>Foto indisponível — abrir original</Text>
+                      </View>
+                    </Link>
+                  )}
+                  {carimbo && (
+                    <View style={styles.carimboDataHora}>
+                      <Text style={styles.carimboDataHoraTexto}>{carimbo}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.photoLegenda}>{nomeItem}</Text>
+              </View>
+            )
+          })}
+        </View>
+      ))}
+    </View>
+  )
+}
+
+function AmbienteSecao({ ambiente, numero, vistoria }) {
   const itens = ambiente.vistoria_itens || []
   const nomeAmbiente = ambiente.ambiente || ambiente.nome
+  const entradaRef = vistoria?.entradaReferencia
 
   return (
     <View>
@@ -650,6 +719,14 @@ function AmbienteSecao({ ambiente, numero }) {
         const numeroItem = `${numero}.${index + 1}`
         const fotosDoItem = item._fotosParaPdf || []
         const primeiroItem = index === 0
+
+        // Laudo comparativo: separa fotos copiadas da Entrada (ver
+        // useVistoriaExecucao.importarDeVistoriaEntrada) das fotos
+        // tiradas de verdade durante esta vistoria — nunca misturadas
+        // na mesma grade.
+        const fotosEntrada = fotosDoItem.filter((f) => f.eh_referencia_entrada)
+        const fotosSaida = fotosDoItem.filter((f) => !f.eh_referencia_entrada)
+        const temAmbasEtapas = fotosEntrada.length > 0 && fotosSaida.length > 0
 
         return (
           <View key={item.id} style={styles.itemBlocoComFotos}>
@@ -708,56 +785,35 @@ function AmbienteSecao({ ambiente, numero }) {
             {/* Fotos EXCLUSIVAS deste item, logo em seguida — se não
                 houver nenhuma, só a descrição acima e segue pro
                 próximo item (sem grade vazia, sem espaço reservado).
-                Agrupadas em LINHAS explícitas de 3 (em vez de deixar
-                o flexWrap decidir sozinho onde cada foto cai) — cada
-                linha é seu próprio wrap={false}. Isso é necessário
-                porque wrap={false} só na foto individual, dentro de
-                uma grade com flexWrap, não é suficiente pro
-                react-pdf: ele ainda cortava fotos ao meio bem na
-                margem inferior da página, porque a decisão de quebra
-                não enxergava a "linha" como unidade — só via fotos
-                soltas. */}
-            {fotosDoItem.length > 0 && (
-              <View>
-                {agruparEmLinhas(fotosDoItem, 3).map((linha, linhaIndex) => (
-                  <View key={linhaIndex} style={styles.photosRow} wrap={false}>
-                    {linha.map((foto) => {
-                      const carimbo = formatarCarimboFoto(foto.created_at)
-                      return (
-                        <View key={foto.id} style={styles.photoBox}>
-                          <View style={styles.photoFrame}>
-                            {foto._pdfSrc ? (
-                              <Link src={foto.url}>
-                                <Image src={foto._pdfSrc} style={styles.photo} />
-                              </Link>
-                            ) : (
-                              <Link src={foto.url}>
-                                <View style={styles.photoIndisponivel}>
-                                  <Text style={styles.photoIndisponivelTexto}>
-                                    Foto indisponível — abrir original
-                                  </Text>
-                                </View>
-                              </Link>
-                            )}
-                            {carimbo && (
-                              <View style={styles.carimboDataHora}>
-                                <Text style={styles.carimboDataHoraTexto}>{carimbo}</Text>
-                              </View>
-                            )}
-                          </View>
-                          {/* Legenda centralizada com o nome do item —
-                              repetida em cada foto de propósito: ajuda
-                              a identificar de qual item é a foto mesmo
-                              se ela acabar isolada (impressa solta,
-                              recortada, etc.). */}
-                          <Text style={styles.photoLegenda}>{nomeItem}</Text>
-                        </View>
-                      )
-                    })}
-                  </View>
-                ))}
+                Quando o item tem fotos das duas etapas (comparativo
+                Entrada -> Saída), cada grupo ganha sua própria tag
+                colorida e as duas ficam separadas por uma divisória —
+                nunca misturadas na mesma grade. */}
+            {fotosEntrada.length > 0 && (
+              <View style={styles.etapaBloco} wrap={false}>
+                <View style={styles.etapaTagEntrada}>
+                  <Text style={styles.etapaTagEntradaTexto}>
+                    VISTORIA DE ENTRADA (
+                    {formatarData(entradaRef?.finalizada_em || entradaRef?.concluida_em || entradaRef?.data_agendamento)}
+                    )
+                  </Text>
+                </View>
               </View>
             )}
+            <GradeDeFotos fotos={fotosEntrada} nomeItem={nomeItem} />
+
+            {temAmbasEtapas && <View style={styles.etapaDivisoria} />}
+
+            {fotosSaida.length > 0 && (
+              <View style={styles.etapaBloco} wrap={false}>
+                <View style={styles.etapaTagSaida}>
+                  <Text style={styles.etapaTagSaidaTexto}>
+                    VISTORIA DE SAÍDA ({formatarData(vistoria?.finalizada_em || vistoria?.concluida_em)})
+                  </Text>
+                </View>
+              </View>
+            )}
+            <GradeDeFotos fotos={fotosSaida} nomeItem={nomeItem} />
 
             {/* Divisória fina entre itens — participa do fluxo normal
                 (não é wrap={false}), então não interfere com a grade
@@ -845,7 +901,7 @@ function LaudoDocument({ vistoria, ambientes }) {
           <Text>Nenhum item avaliado nesta vistoria até o momento.</Text>
         ) : (
           ambientesParaLaudo.map((ambiente, index) => (
-            <AmbienteSecao key={ambiente.id} ambiente={ambiente} numero={index + 1} />
+            <AmbienteSecao key={ambiente.id} ambiente={ambiente} numero={index + 1} vistoria={vistoria} />
           ))
         )}
 

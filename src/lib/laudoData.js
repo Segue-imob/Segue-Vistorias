@@ -2,6 +2,25 @@ import { supabase } from './supabaseClient'
 import { FOTOS_BUCKET } from './vistoriaExecucao'
 
 /**
+ * Se a vistoria referenciar uma Entrada (ver
+ * useVistoriaExecucao.importarDeVistoriaEntrada), busca a data/hora
+ * de finalização daquela Entrada — usada na tag "VISTORIA DE ENTRADA
+ * (...)" do laudo comparativo. Compartilhada entre `buscarDadosParaLaudo`
+ * (busca avulsa) e `useVistoriaExecucao` (tela de execução), pra não
+ * duplicar essa consulta em dois lugares. Melhor esforço: nunca lança
+ * — se a Entrada referenciada não existir mais, só devolve `null`.
+ */
+export async function buscarEntradaReferencia(vistoria) {
+  if (!vistoria?.entrada_referencia_id) return null
+  const { data } = await supabase
+    .from('vistorias')
+    .select('id, data_agendamento, finalizada_em, concluida_em')
+    .eq('id', vistoria.entrada_referencia_id)
+    .maybeSingle()
+  return data || null
+}
+
+/**
  * Busca vistoria + ambientes/itens/fotos prontos pra gerar o laudo em
  * PDF, de forma avulsa — sem precisar montar o hook
  * useVistoriaExecucao inteiro (que é pensado pra uma tela só, presa a
@@ -32,6 +51,8 @@ export async function buscarDadosParaLaudo(vistoriaId) {
 
   if (vErr) throw vErr
   if (!vistoria) throw new Error('Vistoria não encontrada.')
+
+  vistoria.entradaReferencia = await buscarEntradaReferencia(vistoria)
 
   const { data: ambientesData, error: aErr } = await supabase
     .from('vistoria_ambientes')

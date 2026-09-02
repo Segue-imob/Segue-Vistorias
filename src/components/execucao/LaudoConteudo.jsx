@@ -37,6 +37,39 @@ function labelFuncionamento(valor) {
 }
 
 /**
+ * Grade de fotos de um grupo (Entrada OU Saída dentro de um item) —
+ * extraída como componente próprio porque, no laudo comparativo de
+ * uma vistoria de Saída, é usada até duas vezes por item.
+ */
+function GradeDeFotosHtml({ fotos, nomeItem, nomeAmbiente, onOpenFoto }) {
+  if (fotos.length === 0) return null
+  return (
+    <div className="mt-2 flex flex-wrap gap-3 pl-4">
+      {fotos.map((foto) => (
+        <div key={foto.id} className="w-32 shrink-0 break-inside-avoid">
+          <button
+            type="button"
+            onClick={() => onOpenFoto({ ...foto, ambienteNome: nomeAmbiente, itemNome: nomeItem })}
+            className="relative block aspect-[4/3] w-32 overflow-hidden rounded-lg border border-brand-border"
+          >
+            <img src={foto.url} alt="Foto do item" className="h-full w-full object-cover" />
+            {foto.created_at && (
+              <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 rounded border border-[#e5e7eb] bg-white px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-slate-900 shadow-sm">
+                {formatarCarimboFoto(foto.created_at)}
+              </span>
+            )}
+          </button>
+          {/* Legenda centralizada com o nome do item — repetida em
+              cada foto de propósito, ajuda a identificar de qual item
+              é mesmo se a foto acabar isolada. */}
+          <p className="mt-1 text-center text-xs font-medium text-slate-700">{nomeItem}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
  * Corpo do laudo — usado tanto pela página `/vistorias/:id/laudo`
  * quanto pelo `LaudoModal` (aberto direto na lista de Vistorias).
  * Duas situações:
@@ -184,6 +217,14 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
               // apareciam na versão HTML do laudo (apareciam no PDF,
               // porque lá essa combinação já existia).
               const fotosDoItem = coletarFotosDoItem(item)
+              // Laudo comparativo: separa fotos copiadas da Entrada
+              // (ver useVistoriaExecucao.importarDeVistoriaEntrada)
+              // das fotos tiradas de verdade nesta vistoria — nunca
+              // misturadas na mesma grade.
+              const fotosEntrada = fotosDoItem.filter((f) => f.eh_referencia_entrada)
+              const fotosSaida = fotosDoItem.filter((f) => !f.eh_referencia_entrada)
+              const temAmbasEtapas = fotosEntrada.length > 0 && fotosSaida.length > 0
+              const nomeAmbiente = ambiente.ambiente || ambiente.nome
               return (
                 <div key={item.id} className="border-b border-[#e5e7eb] pb-4 last:border-0 last:pb-0">
                   {/* Bloco de texto (título do ambiente só no primeiro
@@ -196,7 +237,7 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
                         className="mb-3 rounded-lg px-4 py-2.5 text-sm font-bold text-white"
                         style={{ backgroundColor: '#2b1e1a' }}
                       >
-                        {ambIndex + 1}. {ambiente.ambiente || ambiente.nome}
+                        {ambIndex + 1}. {nomeAmbiente}
                       </p>
                     )}
                     <p className="text-lg font-bold text-brand-900">
@@ -218,35 +259,48 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
                     </div>
                     {item.observacao && <p className="mt-1.5 pl-5 text-base text-slate-500">{item.observacao}</p>}
                   </div>
-                  {fotosDoItem.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-3 pl-4">
-                      {fotosDoItem.map((foto) => (
-                        <div key={foto.id} className="w-32 shrink-0 break-inside-avoid">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onOpenFoto({
-                                ...foto,
-                                ambienteNome: ambiente.ambiente || ambiente.nome,
-                                itemNome: nomeItem
-                              })
-                            }
-                            className="relative block aspect-[4/3] w-32 overflow-hidden rounded-lg border border-brand-border"
-                          >
-                            <img src={foto.url} alt="Foto do item" className="h-full w-full object-cover" />
-                            {foto.created_at && (
-                              <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 rounded border border-[#e5e7eb] bg-white px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-slate-900 shadow-sm">
-                                {formatarCarimboFoto(foto.created_at)}
-                              </span>
-                            )}
-                          </button>
-                          {/* Legenda centralizada com o nome do item —
-                              repetida em cada foto de propósito, ajuda
-                              a identificar de qual item é mesmo se a
-                              foto acabar isolada. */}
-                          <p className="mt-1 text-center text-xs font-medium text-slate-700">{nomeItem}</p>
-                        </div>
-                      ))}
+
+                  {/* Laudo comparativo: cada grupo de fotos ganha sua
+                      própria tag colorida (Entrada = azul, Saída =
+                      terracota), com espaçamento vertical claro e uma
+                      divisória sutil entre os dois grupos quando o
+                      item tem fotos das duas etapas. */}
+                  {fotosEntrada.length > 0 && (
+                    <div className="mt-3 pl-4 print:break-inside-avoid">
+                      <span className="inline-block rounded-md bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-800">
+                        📸 VISTORIA DE ENTRADA (
+                        {formatarDataHora(
+                          vistoria.entradaReferencia?.finalizada_em ||
+                            vistoria.entradaReferencia?.concluida_em ||
+                            vistoria.entradaReferencia?.data_agendamento
+                        )}
+                        )
+                      </span>
+                      <GradeDeFotosHtml
+                        fotos={fotosEntrada}
+                        nomeItem={nomeItem}
+                        nomeAmbiente={nomeAmbiente}
+                        onOpenFoto={onOpenFoto}
+                      />
+                    </div>
+                  )}
+
+                  {temAmbasEtapas && <div className="ml-4 mt-3 border-t border-[#e5e7eb]" />}
+
+                  {fotosSaida.length > 0 && (
+                    <div className="mt-3 pl-4 print:break-inside-avoid">
+                      <span
+                        className="inline-block rounded-md px-2.5 py-1 text-xs font-bold text-white"
+                        style={{ backgroundColor: '#a64324' }}
+                      >
+                        📸 VISTORIA DE SAÍDA ({formatarDataHora(vistoria.finalizada_em || vistoria.concluida_em)})
+                      </span>
+                      <GradeDeFotosHtml
+                        fotos={fotosSaida}
+                        nomeItem={nomeItem}
+                        nomeAmbiente={nomeAmbiente}
+                        onOpenFoto={onOpenFoto}
+                      />
                     </div>
                   )}
                 </div>

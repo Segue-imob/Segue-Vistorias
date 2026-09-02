@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { FOTOS_BUCKET } from '../lib/vistoriaExecucao'
+import { buscarEntradaReferencia } from '../lib/laudoData'
 
 // IDs "locais" (fallback): usados quando o INSERT no Supabase falha em
 // campo (sem conexão, coluna divergente, etc.) e ainda assim
@@ -83,6 +84,14 @@ export function useVistoriaExecucao(vistoriaId) {
       )
       .eq('id', vid)
       .maybeSingle()
+
+    // Se esta vistoria referenciar uma Entrada (importação Entrada ->
+    // Saída), busca a data de finalização dela — usada na tag
+    // "VISTORIA DE ENTRADA (...)" do laudo comparativo. Função
+    // compartilhada com laudoData.js, pra não duplicar essa consulta.
+    if (!vErr && vistoriaData) {
+      vistoriaData.entradaReferencia = await buscarEntradaReferencia(vistoriaData)
+    }
 
     setVistoria(vistoriaData || null)
 
@@ -763,7 +772,13 @@ export function useVistoriaExecucao(vistoriaId) {
               ambiente_id: novoAmbiente.id,
               item_id: novoItem.id,
               foto_url: urlFoto,
-              url: urlFoto
+              url: urlFoto,
+              // Marca essa linha como uma foto de REFERÊNCIA copiada
+              // da Entrada — sem isso, uma vez inserida na Saída ela
+              // fica indistinguível de uma foto tirada de verdade
+              // durante a Saída, e o laudo não teria como separar as
+              // duas em seções diferentes.
+              eh_referencia_entrada: true
             })
             if (novaFotoErr) {
               console.warn(
@@ -773,6 +788,19 @@ export function useVistoriaExecucao(vistoriaId) {
             }
           }
         }
+      }
+
+      // Grava qual Entrada foi usada como referência — o laudo
+      // precisa disso pra buscar a data/hora de finalização daquela
+      // vistoria e mostrar na tag "VISTORIA DE ENTRADA (...)". Fica
+      // na vistoria (não só nas fotos) porque só precisamos de UM
+      // valor por vistoria de Saída, não um por foto.
+      const { error: refErr } = await supabase
+        .from('vistorias')
+        .update({ entrada_referencia_id: vistoriaEntradaId })
+        .eq('id', vistoriaId)
+      if (refErr) {
+        console.warn('[useVistoriaExecucao] Não foi possível gravar entrada_referencia_id:', refErr.message)
       }
 
       await fetchAll()

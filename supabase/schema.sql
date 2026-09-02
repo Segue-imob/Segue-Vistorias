@@ -572,3 +572,15 @@ alter table public.imoveis add column if not exists numero text;
 alter table public.imoveis add column if not exists destinacao text;
 alter table public.imoveis add column if not exists tipo_imovel text;
 alter table public.vistorias add column if not exists sincronizado boolean not null default false;
+
+-- ============================================================
+-- Laudo comparativo Entrada -> Saída: marca quais fotos de uma
+-- vistoria de Saída são referência copiada da Entrada (em vez de
+-- capturadas de verdade durante a Saída), e qual Entrada foi usada
+-- como referência — o laudo usa isso pra separar visualmente as
+-- fotos em duas seções (Entrada/Saída) dentro de cada item, com a
+-- data de finalização de cada etapa na tag.
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+alter table public.vistorias add column if not exists entrada_referencia_id uuid references public.vistorias (id) on delete set null;
+alter table public.vistoria_fotos add column if not exists eh_referencia_entrada boolean not null default false;
