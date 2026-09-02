@@ -8,6 +8,7 @@ import Agenda from './pages/Agenda'
 import Vistorias from './pages/Vistorias'
 import MinhasVistorias from './pages/MinhasVistorias'
 import VistoriaExecucao from './pages/VistoriaExecucao'
+import LaudoVistoria from './pages/LaudoVistoria'
 import Usuarios from './pages/Usuarios'
 import SemAcesso from './pages/SemAcesso'
 import { useAuth } from './context/AuthContext'
@@ -65,6 +66,14 @@ export default function App() {
           element={
             <ProtectedRoute permission="viewVistorias">
               <Vistorias />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vistorias/:id/laudo"
+          element={
+            <ProtectedRoute permission="viewLaudo">
+              <LaudoVistoria />
             </ProtectedRoute>
           }
         />

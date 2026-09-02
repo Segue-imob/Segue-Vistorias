@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { FOTOS_BUCKET } from './vistoriaExecucao'
 
 /**
  * Busca vistoria + ambientes/itens/fotos prontos pra gerar o laudo em
@@ -72,4 +73,31 @@ export async function buscarDadosParaLaudo(vistoriaId) {
   }))
 
   return { vistoria, ambientes }
+}
+
+/**
+ * Sobe um PDF de laudo já gerado (Blob) pro Storage e grava a URL em
+ * `vistorias.laudo_pdf_url` — versão avulsa de `salvarLaudoPdf` (que
+ * vive dentro de `useVistoriaExecucao`, preso ao ciclo de vida
+ * daquela tela). Usada pela página `/vistorias/:id/laudo`, que
+ * precisa gerar/salvar o PDF sem estar dentro do hook de execução.
+ * Lança em caso de erro — diferente da versão do hook (melhor
+ * esforço), aqui quem chama decide como avisar o usuário.
+ */
+export async function salvarLaudoPdfAvulso(vistoriaId, blob) {
+  const path = `${vistoriaId}/laudo/${Date.now()}.pdf`
+  const { error: upErr } = await supabase.storage
+    .from(FOTOS_BUCKET)
+    .upload(path, blob, { contentType: 'application/pdf' })
+  if (upErr) throw upErr
+
+  const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
+
+  const { error: updErr } = await supabase
+    .from('vistorias')
+    .update({ laudo_pdf_url: pub.publicUrl })
+    .eq('id', vistoriaId)
+  if (updErr) throw updErr
+
+  return pub.publicUrl
 }

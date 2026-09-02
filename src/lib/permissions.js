@@ -74,6 +74,10 @@ export const PERMISSIONS = {
   // (para acompanhamento/QA — a checagem de "é o vistoriador certo?"
   // continua acontecendo na consulta em si, via vistoriador_id).
   viewVistoriaExecucao: (role) => isVistoriador(role) || isAdmin(role),
+  // Página `/vistorias/:id/laudo` — visualização do laudo em PDF ou
+  // em HTML/React (fallback). Aberta na hierarquia inteira; a RLS já
+  // restringe o vistoriador aos dados da própria vistoria.
+  viewLaudo: (role) => isAdmin(role) || isGestao(role) || isVistoriador(role),
 
   // Ações
   scheduleVistoria: (role) => isAdmin(role) || isGestao(role),

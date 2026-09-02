@@ -1,10 +1,8 @@
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Pencil, Trash2, FileDown, Loader2, MapPin } from 'lucide-react'
-import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Pencil, Trash2, FileDown, MapPin } from 'lucide-react'
 import StatusBadge from './StatusBadge'
-import { buscarDadosParaLaudo } from '../lib/laudoData'
-import { gerarLaudoPdfBlob } from '../lib/laudoPdf'
 
 /**
  * Laudo disponível pro Solicitante quando a vistoria foi finalizada
@@ -22,35 +20,16 @@ function podeVerLaudo(v) {
  * sistema: "agendada" na criação (VistoriaModal), "aceita" quando o
  * vistoriador abre a vistoria em campo (VistoriaExecucao.jsx), e
  * "finalizada" ao finalizar o checklist (finalizarVistoria).
+ *
+ * "Visualizar / Baixar Laudo" é um link de verdade pra rota
+ * `/vistorias/:id/laudo` (target="_blank") — não gera mais um Blob
+ * na hora e tenta jogar numa aba já aberta via window.open, padrão
+ * que falhava silenciosamente em vários navegadores (Safari em
+ * especial bloqueia/perde a navegação de uma blob: URL entre janelas
+ * diferentes). Uma URL navegável de verdade não tem esse problema —
+ * o próprio navegador cuida de abrir a aba e carregar o conteúdo.
  */
 export default function VistoriaListView({ vistorias, onEdit, onDelete, canEdit, canDelete }) {
-  const [carregandoLaudoId, setCarregandoLaudoId] = useState(null)
-  const [erroLaudo, setErroLaudo] = useState(null) // { id, mensagem }
-
-  const handleVerLaudo = async (v) => {
-    // Abre a aba já na hora do clique (síncrono) — se esperasse a
-    // busca/geração do PDF terminar pra só então chamar window.open,
-    // a maioria dos navegadores bloquearia como pop-up, já que a
-    // chamada não aconteceria mais "durante" o gesto do usuário.
-    const novaAba = window.open('', '_blank')
-    setCarregandoLaudoId(v.id)
-    setErroLaudo(null)
-    try {
-      const { vistoria, ambientes } = await buscarDadosParaLaudo(v.id)
-      const blob = await gerarLaudoPdfBlob(vistoria, ambientes)
-      const urlObjeto = URL.createObjectURL(blob)
-      if (novaAba) {
-        novaAba.location.href = urlObjeto
-      }
-    } catch (err) {
-      console.error('[VistoriaListView] Erro ao gerar o laudo:', err.message, err)
-      setErroLaudo({ id: v.id, mensagem: err.message || 'Erro ao gerar o laudo.' })
-      novaAba?.close()
-    } finally {
-      setCarregandoLaudoId(null)
-    }
-  }
-
   if (vistorias.length === 0) {
     return (
       <div className="card flex flex-col items-center justify-center py-16 text-center">
@@ -78,7 +57,6 @@ export default function VistoriaListView({ vistorias, onEdit, onDelete, canEdit,
             const podeEditar = canEdit(v)
             const podeExcluir = canDelete
             const temLaudo = podeVerLaudo(v)
-            const carregandoEsteLaudo = carregandoLaudoId === v.id
 
             return (
               <tr key={v.id} className="border-b border-brand-border/50 last:border-0 hover:bg-brand-cream/60">
@@ -101,19 +79,15 @@ export default function VistoriaListView({ vistorias, onEdit, onDelete, canEdit,
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
                     {temLaudo && (
-                      <button
-                        type="button"
-                        onClick={() => handleVerLaudo(v)}
-                        disabled={carregandoEsteLaudo}
-                        className="rounded-md p-1.5 text-slate-400 hover:bg-brand-cream hover:text-brand-accent disabled:opacity-50"
-                        title="Visualizar / Baixar Laudo PDF"
+                      <Link
+                        to={`/vistorias/${v.id}/laudo`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-md p-1.5 text-slate-400 hover:bg-brand-cream hover:text-brand-accent"
+                        title="Visualizar / Baixar Laudo"
                       >
-                        {carregandoEsteLaudo ? (
-                          <Loader2 size={15} className="animate-spin" />
-                        ) : (
-                          <FileDown size={15} />
-                        )}
-                      </button>
+                        <FileDown size={15} />
+                      </Link>
                     )}
                     {podeEditar && (
                       <button
@@ -136,9 +110,6 @@ export default function VistoriaListView({ vistorias, onEdit, onDelete, canEdit,
                       </button>
                     )}
                   </div>
-                  {erroLaudo?.id === v.id && (
-                    <p className="mt-1 text-[10px] font-medium text-red-500">{erroLaudo.mensagem}</p>
-                  )}
                 </td>
               </tr>
             )

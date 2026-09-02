@@ -813,17 +813,22 @@ export function useVistoriaExecucao(vistoriaId) {
   /**
    * "Sincronizar Vistoria" — ação do vistoriador que libera o laudo
    * pro Solicitante: gera o PDF (feito por quem chama, via
-   * gerarLaudoPdfBlob), sobe pro Storage, grava `laudo_pdf_url` e
-   * marca `sincronizado: true`. Ao contrário de `salvarLaudoPdf`
-   * (melhor esforço, nunca lança), esta função LANÇA em caso de erro
-   * — é a ação principal do botão, então uma falha precisa aparecer
-   * de verdade pro vistoriador, não ser engolida silenciosamente.
+   * gerarLaudoPdfBlob), sobe pro Storage, grava `laudo_pdf_url`,
+   * marca `sincronizado: true` **e** garante `status: 'finalizada'`
+   * explicitamente (rede de segurança — na prática o status já
+   * estava assim antes de chegar aqui, já que o botão só existe numa
+   * vistoria já finalizada, mas fixar isso deixa a função correta
+   * por si só, independente de quem a chama). Ao contrário de
+   * `salvarLaudoPdf` (melhor esforço, nunca lança), esta função
+   * LANÇA em caso de erro — é a ação principal do botão, então uma
+   * falha precisa aparecer de verdade pro vistoriador, não ser
+   * engolida silenciosamente.
    *
    * Não usei `status: 'Concluída'` de propósito — é a mesma razão já
    * documentada em `finalizarVistoria`: essa string quebraria toda a
    * filtragem por status do app (aba Concluídas, Kanban, badge). O
    * campo `sincronizado` (booleano, coluna própria) já resolve a
-   * necessidade real sem tocar em `status`.
+   * necessidade real sem tocar no valor de `status`.
    */
   const sincronizarVistoria = useCallback(
     async (blob) => {
@@ -840,14 +845,14 @@ export function useVistoriaExecucao(vistoriaId) {
 
       const { error: updErr } = await supabase
         .from('vistorias')
-        .update({ laudo_pdf_url: pub.publicUrl, sincronizado: true })
+        .update({ status: 'finalizada', laudo_pdf_url: pub.publicUrl, sincronizado: true })
         .eq('id', vistoriaId)
       if (updErr) {
         console.error('[useVistoriaExecucao] Erro do Supabase ao sincronizar a vistoria:', updErr.message, updErr)
         throw updErr
       }
 
-      setVistoria((v) => (v ? { ...v, laudo_pdf_url: pub.publicUrl, sincronizado: true } : v))
+      setVistoria((v) => (v ? { ...v, status: 'finalizada', laudo_pdf_url: pub.publicUrl, sincronizado: true } : v))
       return pub.publicUrl
     },
     [vistoriaId]
