@@ -6,6 +6,7 @@ import { canEditVistoria, canDeleteVistoria } from '../lib/permissions'
 import VistoriaModal from '../components/VistoriaModal'
 import VistoriaListView from '../components/VistoriaListView'
 import ConfirmDialog from '../components/ConfirmDialog'
+import LaudoModal from '../components/execucao/LaudoModal'
 
 export default function Vistorias() {
   const { profile, role } = useAuth()
@@ -15,6 +16,7 @@ export default function Vistorias() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingVistoria, setEditingVistoria] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [laudoVistoriaId, setLaudoVistoriaId] = useState(null)
 
   const podeExcluir = canDeleteVistoria(role)
 
@@ -93,6 +95,7 @@ export default function Vistorias() {
           vistorias={filteredVistorias}
           onEdit={openEdit}
           onDelete={setDeleteTarget}
+          onOpenLaudo={setLaudoVistoriaId}
           canEdit={(v) => canEditVistoria(v, profile, role)}
           canDelete={podeExcluir}
         />
@@ -114,6 +117,8 @@ export default function Vistorias() {
         danger
         onConfirm={handleDeleteConfirm}
       />
+
+      <LaudoModal vistoriaId={laudoVistoriaId} onClose={() => setLaudoVistoriaId(null)} />
     </div>
   )
 }

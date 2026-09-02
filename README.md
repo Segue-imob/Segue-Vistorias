@@ -295,20 +295,23 @@ supabase functions deploy admin-reset-password
 
 Não é preciso configurar `SUPABASE_URL`, `SUPABASE_ANON_KEY` ou `SUPABASE_SERVICE_ROLE_KEY` manualmente — o Supabase já disponibiliza essas três variáveis automaticamente dentro de toda Edge Function do projeto. Se preferir remover essa dependência também, dá pra trocar por `supabase.auth.resetPasswordForEmail(email)` (manda um link de redefinição para o próprio usuário) — é só pedir.
 
-## Página `/vistorias/:id/laudo` — visualização do laudo
+## Visualização do laudo: modal na lista + página própria
 
-**O bug relatado**: clicar em "Visualizar / Baixar Laudo" antes disparava um `window.open('', '_blank')` seguido de gerar um PDF em memória (`Blob`) e tentar jogar sua URL (`URL.createObjectURL`) dentro da aba recém-aberta via `novaAba.location.href = urlObjeto`. Esse padrão — blob gerado numa janela, atribuído à `location` de OUTRA janela — é conhecido por falhar silenciosamente em vários navegadores (Safari em especial bloqueia ou perde essa navegação entre contextos de janela diferentes), o que batia exatamente com "abre a aba, mas nada carrega".
+Duas formas de ver o laudo, compartilhando a mesma renderização (`LaudoConteudo.jsx`, em `components/execucao/`) pra não duplicar código:
 
-**A correção**: criei uma rota de verdade, `/vistorias/:id/laudo` (`LaudoVistoria.jsx`), e o botão na lista virou um `<Link to={...} target="_blank">` (React Router) em vez de um `onClick` que gera Blob na hora — uma URL navegável não tem esse problema, o próprio navegador cuida de abrir a aba e carregar o conteúdo, sem depender de nenhum truque de `window.open`.
+- **Na lista de Vistorias (`/vistorias`)**: clicar em "Visualizar / Baixar Laudo" abre `LaudoModal` — um overlay fullscreen na própria página (fundo escuro semi-transparente com leve desfoque, cabeçalho fixo com título "Laudo de Vistoria - {Tipo} - CI {Código}", botão "Baixar PDF" e botão "✕ Fechar"). Fechar sempre volta exatamente pra lista, porque não houve navegação nenhuma — é só um `<div className="fixed inset-0">` por cima da mesma tela. Fecha com o botão, clicando fora (no overlay escuro), ou com **ESC**.
+- **Página própria (`/vistorias/:id/laudo`)**: continua existindo, pra link direto/favoritar — útil se alguém quiser mandar o link do laudo por fora do app.
 
-A página busca os dados direto do Supabase (`buscarDadosParaLaudo()`, a mesma função usada pela lista antes) e decide o que mostrar:
+**Por que existiam DOIS jeitos de abrir o laudo antes desta entrega, e por que um deles quebrava**: a versão anterior do botão na lista abria uma aba nova via `window.open('', '_blank')` e, só depois, gerava o PDF em memória (`Blob`) tentando jogar sua URL na aba já aberta (`novaAba.location.href = urlObjeto`) — um padrão conhecido por falhar silenciosamente em vários navegadores (Safari em especial bloqueia/perde navegação de blob: URL entre janelas diferentes). O pedido desta entrega foi trocar isso por um modal que nunca sai da página — resolve o problema pela raiz, já que não existe mais "outra aba" nenhuma pra falhar.
+
+Ambos os pontos de entrada buscam os dados via `buscarDadosParaLaudo()` e decidem o que mostrar:
 
 - **Se `vistoria.laudo_pdf_url` já existe**: mostra o PDF num `<iframe>` (com um link "Abrir em nova aba" ao lado, caso o navegador bloqueie a pré-visualização embutida).
-- **Se não existe ainda**: renderiza o laudo **em HTML/React direto na tela**, buscando ao vivo em `vistorias`, `vistoria_ambientes`, `vistoria_itens` e `vistoria_fotos` — mesmo filtro estrito do PDF (só ambientes com item avaliado, só itens com condição preenchida), mesma numeração hierárquica, fotos clicáveis abrindo o mesmo `PhotoLightbox` usado na tela de execução (com navegação entre todas as fotos da vistoria).
+- **Se não existe ainda**: renderiza o laudo **em HTML/React direto na tela**, buscando ao vivo em `vistorias`, `vistoria_ambientes`, `vistoria_itens` e `vistoria_fotos` — mesmo filtro estrito do PDF (só ambientes com item avaliado, só itens com condição preenchida — `filtrarAmbientesParaLaudo()`), mesma numeração hierárquica, fotos clicáveis abrindo o mesmo `PhotoLightbox` usado na tela de execução (com navegação entre todas as fotos da vistoria, via `construirTodasFotosDoLaudo()`). Essas duas funções auxiliares vivem em `src/lib/laudoData.js`, compartilhadas entre `LaudoModal` e a página `/vistorias/:id/laudo`.
 
-Em qualquer um dos dois casos, o botão "Baixar PDF" no topo gera uma versão fresca na hora (`gerarLaudoPdfBlob`), dispara o download, e salva a URL em `laudo_pdf_url` como melhor esforço (`salvarLaudoPdfAvulso()`, em `src/lib/laudoData.js` — mesma lógica de `salvarLaudoPdf`/`sincronizarVistoria` do hook de execução, só que como função avulsa, já que esta página não está dentro daquele hook).
+Em qualquer um dos dois casos, o botão "Baixar PDF" gera uma versão fresca na hora (`gerarLaudoPdfBlob`), dispara o download, e salva a URL em `laudo_pdf_url` como melhor esforço (`salvarLaudoPdfAvulso()` — mesma lógica de `salvarLaudoPdf`/`sincronizarVistoria` do hook de execução, só que como função avulsa, já que nem o modal nem a página estão dentro daquele hook).
 
-**Acesso**: nova permissão `viewLaudo` (Administrador, Gestão ou Vistoriador) — a RLS de `vistorias`/`vistoria_ambientes`/`vistoria_itens`/`vistoria_fotos` já restringe o Vistoriador aos dados da própria vistoria via `owns_vistoria()`, então abrir a permissão pros três perfis não vaza dado de vistoria alheia.
+**Acesso**: permissão `viewLaudo` (Administrador, Gestão ou Vistoriador) — a RLS de `vistorias`/`vistoria_ambientes`/`vistoria_itens`/`vistoria_fotos` já restringe o Vistoriador aos dados da própria vistoria via `owns_vistoria()`, então abrir a permissão pros três perfis não vaza dado de vistoria alheia.
 
 **Reforço em `sincronizarVistoria()`**: agora define `status: 'finalizada'` explicitamente no mesmo `UPDATE` que já grava `laudo_pdf_url` e `sincronizado: true` — na prática isso já era verdade antes (o botão "Sincronizar Vistoria" só existe numa vistoria já finalizada), mas fixar isso deixa a função correta por si só, sem depender de quem a chama já ter garantido isso antes.
 
@@ -322,7 +325,7 @@ Depois de finalizar a vistoria, o vistoriador vê dois botões no card "Esta vis
 
 **Por que não usei `status: 'Concluída'`, de novo**: mesma razão já explicada em `finalizarVistoria` — essa string quebraria a filtragem por status em todo o app (aba Concluídas, badge). `sincronizado` é uma coluna booleana própria, independente de `status`, que resolve a necessidade real (sinalizar "o laudo está pronto pro solicitante") sem interferir em nada que já dependia do valor `'finalizada'`.
 
-**Acesso ao laudo pelo Administrador (`/vistorias`)**: a coluna "Ações" da lista mostra o ícone de download sempre que `status === 'finalizada'` **ou** `sincronizado === true` (não precisa dos dois; qualquer um já libera) — é um link direto pra `/vistorias/:id/laudo` (ver seção anterior), não mais uma geração de PDF em memória disparada por clique.
+**Acesso ao laudo pelo Administrador (`/vistorias`)**: a coluna "Ações" da lista mostra o ícone de download sempre que `status === 'finalizada'` **ou** `sincronizado === true` (não precisa dos dois; qualquer um já libera) — abre `LaudoModal` (ver seção anterior), não navega pra rota nenhuma.
 
 **Sobre "remover restrição de visualização baseada no ID do usuário"**: verifiquei as políticas de RLS de `vistoria_ambientes`/`vistoria_itens`/`vistoria_fotos` e o hook `useVistorias.js` antes de mexer — não existe nenhuma restrição dessas hoje. Todas as políticas de `select` dessas três tabelas já incluem `is_admin() or is_gestao() or ...`, e `useVistorias()` sem um `vistoriadorId` explícito (como é usado em `/vistorias`) já traz todas as vistorias, de qualquer vistoriador. Não havia nada pra remover — o Administrador já tinha acesso completo; só faltava a interface pra usar esse acesso, que é o que essa entrega adiciona.
 

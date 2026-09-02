@@ -10,9 +10,7 @@ export function useImoveis() {
     setLoading(true)
     const { data, error } = await supabase
       .from('imoveis')
-      .select(
-        'id, codigo_imovel, cep, endereco, numero, bairro, cidade, destinacao, tipo_imovel, proprietario_nome, inquilino_nome'
-      )
+      .select('*')
       .order('codigo_imovel', { ascending: true })
 
     if (!error) setImoveis(data || [])

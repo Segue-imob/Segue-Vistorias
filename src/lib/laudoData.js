@@ -23,7 +23,7 @@ export async function buscarDadosParaLaudo(vistoriaId) {
     .select(
       `
       *,
-      imoveis:imovel_id ( id, codigo_imovel, endereco, numero, bairro, cidade, inquilino_nome, proprietario_nome ),
+      imoveis:imovel_id ( * ),
       vistoriador:vistoriador_id ( id, nome, email )
     `
     )
@@ -100,4 +100,37 @@ export async function salvarLaudoPdfAvulso(vistoriaId, blob) {
   if (updErr) throw updErr
 
   return pub.publicUrl
+}
+
+/**
+ * Mesmo filtro estrito usado no PDF (ver laudoPdf.jsx): só ambientes
+ * com pelo menos um item efetivamente avaliado aparecem no laudo, e
+ * dentro deles só os itens com condição preenchida. Compartilhada
+ * entre a página `/vistorias/:id/laudo` e o modal da lista, pra não
+ * duplicar essa regra em dois lugares.
+ */
+export function filtrarAmbientesParaLaudo(ambientes) {
+  return (ambientes || [])
+    .map((amb) => ({ ...amb, vistoria_itens: (amb.vistoria_itens || []).filter((it) => it.estado) }))
+    .filter((amb) => amb.vistoria_itens.length > 0)
+}
+
+/**
+ * Lista achatada, em ordem, de todas as fotos de um conjunto de
+ * ambientes já filtrado (ver `filtrarAmbientesParaLaudo`) — cada foto
+ * carrega o nome do ambiente/item de origem, usado tanto na exibição
+ * quanto no cabeçalho do lightbox.
+ */
+export function construirTodasFotosDoLaudo(ambientesFiltrados) {
+  const lista = []
+  ;(ambientesFiltrados || []).forEach((amb) => {
+    const nomeAmbiente = amb.ambiente || amb.nome
+    ;(amb.vistoria_itens || []).forEach((item) => {
+      const nomeItem = item.item || item.nome
+      ;(item.vistoria_fotos || []).forEach((foto) => {
+        lista.push({ ...foto, ambienteNome: nomeAmbiente, itemNome: nomeItem })
+      })
+    })
+  })
+  return lista
 }

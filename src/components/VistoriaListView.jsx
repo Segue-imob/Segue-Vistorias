@@ -1,6 +1,5 @@
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Link } from 'react-router-dom'
 import { Pencil, Trash2, FileDown, MapPin } from 'lucide-react'
 import StatusBadge from './StatusBadge'
 
@@ -21,15 +20,12 @@ function podeVerLaudo(v) {
  * vistoriador abre a vistoria em campo (VistoriaExecucao.jsx), e
  * "finalizada" ao finalizar o checklist (finalizarVistoria).
  *
- * "Visualizar / Baixar Laudo" é um link de verdade pra rota
- * `/vistorias/:id/laudo` (target="_blank") — não gera mais um Blob
- * na hora e tenta jogar numa aba já aberta via window.open, padrão
- * que falhava silenciosamente em vários navegadores (Safari em
- * especial bloqueia/perde a navegação de uma blob: URL entre janelas
- * diferentes). Uma URL navegável de verdade não tem esse problema —
- * o próprio navegador cuida de abrir a aba e carregar o conteúdo.
+ * "Visualizar / Baixar Laudo" abre `LaudoModal` (overlay na própria
+ * página, ver Vistorias.jsx) em vez de navegar pra `/vistorias/:id/laudo`
+ * numa aba nova — `onOpenLaudo(v.id)` é quem decide isso, aqui é só um
+ * botão de clique.
  */
-export default function VistoriaListView({ vistorias, onEdit, onDelete, canEdit, canDelete }) {
+export default function VistoriaListView({ vistorias, onEdit, onDelete, onOpenLaudo, canEdit, canDelete }) {
   if (vistorias.length === 0) {
     return (
       <div className="card flex flex-col items-center justify-center py-16 text-center">
@@ -79,15 +75,14 @@ export default function VistoriaListView({ vistorias, onEdit, onDelete, canEdit,
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
                     {temLaudo && (
-                      <Link
-                        to={`/vistorias/${v.id}/laudo`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => onOpenLaudo(v.id)}
                         className="rounded-md p-1.5 text-slate-400 hover:bg-brand-cream hover:text-brand-accent"
                         title="Visualizar / Baixar Laudo"
                       >
                         <FileDown size={15} />
-                      </Link>
+                      </button>
                     )}
                     {podeEditar && (
                       <button
