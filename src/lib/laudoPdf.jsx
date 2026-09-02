@@ -91,46 +91,35 @@ const styles = StyleSheet.create({
   laudoTitulo: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: CORES.brand900 },
   laudoCodigo: { fontSize: 8, color: CORES.brand700, marginTop: 1 },
 
-  // ---- Dados gerais (endereço, tipo, datas, vistoriador) — sem
-  // tabela rígida: endereço em destaque + cards de fundo suave ----
-  enderecoLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 2 },
-  enderecoDestaque: { fontSize: 12.5, fontFamily: 'Helvetica-Bold', color: CORES.brand900, marginBottom: 12 },
-  dadosGrid: { flexDirection: 'row', marginBottom: 8 },
-  dadosCard: { flex: 1, backgroundColor: CORES.cream, borderRadius: 4, padding: 8, marginRight: 8 },
-  dadosCardLast: { marginRight: 0 },
-  dadosLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 2, letterSpacing: 0.3 },
-  dadosValor: { fontSize: 9, color: CORES.brand900 },
-  vistoriadorRow: {
-    flexDirection: 'row',
+  // ---- Cards espelhados: "Dados Gerais da Vistoria" e "Informações
+  // do Imóvel" compartilham exatamente o mesmo card (fundo suave,
+  // borda sutil, cantos arredondados, mesmo espaçamento interno) —
+  // só o conteúdo interno muda. Rótulos sempre em caixa alta/pequenos
+  // na cor suave (brand700); valores sempre em negrito na cor
+  // principal (brand900).
+  seccaoCard: {
     backgroundColor: CORES.cream,
-    borderRadius: 4,
-    padding: 8,
+    borderWidth: 1,
+    borderColor: CORES.border,
+    borderRadius: 6,
+    padding: 12,
     marginBottom: 14
   },
-  vistoriadorCell: { flex: 1 },
-  vistoriadorDivider: { width: 1, backgroundColor: CORES.border, marginHorizontal: 12 },
-
-  // ---- Caixa "Informações do Imóvel" — linha de tags/badges com
-  // fundo suave, sem borda pesada de tabela ----
-  infoImovelWrap: { marginBottom: 14 },
-  infoImovelTitulo: {
+  seccaoCardTitulo: {
     fontSize: 8,
     fontFamily: 'Helvetica-Bold',
     color: CORES.brand700,
-    marginBottom: 6,
+    marginBottom: 8,
     letterSpacing: 0.5
   },
-  infoImovelBadgesRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  infoImovelBadge: {
-    backgroundColor: CORES.cream,
-    borderRadius: 12,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    marginRight: 8,
-    marginBottom: 6
-  },
-  infoImovelBadgeLabel: { fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 1 },
-  infoImovelBadgeValor: { fontSize: 8.5, color: CORES.brand900 },
+  seccaoDivisoria: { borderTopWidth: 1, borderTopColor: CORES.border, marginVertical: 8 },
+  seccaoColunasRow: { flexDirection: 'row' },
+  seccaoColuna: { flex: 1, paddingRight: 12 },
+  seccaoColunaComDivisor: { borderRightWidth: 1, borderRightColor: CORES.border, marginRight: 12 },
+  seccaoColunaLast: { paddingRight: 0 },
+  seccaoLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: CORES.brand700, marginBottom: 3, letterSpacing: 0.4 },
+  seccaoValor: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: CORES.brand900 },
+  enderecoDestaque: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: CORES.brand900, marginBottom: 2 },
 
   // ---- Introdução + legenda de condição ----
   introTexto: { fontSize: 8.5, color: CORES.brand900, lineHeight: 1.5, marginBottom: 10, textAlign: 'justify' },
@@ -379,35 +368,40 @@ function Cabecalho({ vistoria, totalFotos }) {
         </View>
       </View>
 
-      <Text style={styles.enderecoLabel}>ENDEREÇO COMPLETO</Text>
-      <Text style={styles.enderecoDestaque}>{endereco || '—'}</Text>
+      <View style={styles.seccaoCard} wrap={false}>
+        <Text style={styles.seccaoLabel}>ENDEREÇO COMPLETO</Text>
+        <Text style={styles.enderecoDestaque}>{endereco || '—'}</Text>
 
-      <View style={styles.dadosGrid}>
-        <View style={styles.dadosCard}>
-          <Text style={styles.dadosLabel}>TIPO DE VISTORIA</Text>
-          <Text style={styles.dadosValor}>{vistoria.tipo || '—'}</Text>
-        </View>
-        <View style={styles.dadosCard}>
-          <Text style={styles.dadosLabel}>DATA/HORA DE INÍCIO</Text>
-          <Text style={styles.dadosValor}>{formatarData(vistoria.data_agendamento)}</Text>
-        </View>
-        <View style={[styles.dadosCard, styles.dadosCardLast]}>
-          <Text style={styles.dadosLabel}>DATA/HORA DE FINALIZAÇÃO</Text>
-          <Text style={styles.dadosValor}>{formatarData(vistoria.finalizada_em || vistoria.concluida_em)}</Text>
-        </View>
-      </View>
+        <View style={styles.seccaoDivisoria} />
 
-      <View style={styles.vistoriadorRow}>
-        <View style={styles.vistoriadorCell}>
-          <Text style={styles.dadosLabel}>VISTORIADOR RESPONSÁVEL</Text>
-          <Text style={styles.dadosValor}>{vistoria.vistoriador?.nome || '—'}</Text>
+        <View style={styles.seccaoColunasRow}>
+          <View style={[styles.seccaoColuna, styles.seccaoColunaComDivisor]}>
+            <Text style={styles.seccaoLabel}>TIPO DE VISTORIA</Text>
+            <Text style={styles.seccaoValor}>{vistoria.tipo || '—'}</Text>
+          </View>
+          <View style={[styles.seccaoColuna, styles.seccaoColunaComDivisor]}>
+            <Text style={styles.seccaoLabel}>DATA/HORA DE INÍCIO</Text>
+            <Text style={styles.seccaoValor}>{formatarData(vistoria.data_agendamento)}</Text>
+          </View>
+          <View style={[styles.seccaoColuna, styles.seccaoColunaLast]}>
+            <Text style={styles.seccaoLabel}>DATA/HORA DE FINALIZAÇÃO</Text>
+            <Text style={styles.seccaoValor}>{formatarData(vistoria.finalizada_em || vistoria.concluida_em)}</Text>
+          </View>
         </View>
-        <View style={styles.vistoriadorDivider} />
-        <View style={styles.vistoriadorCell}>
-          <Text style={styles.dadosLabel}>TOTAL DE FOTOS</Text>
-          <Text style={styles.dadosValor}>
-            {totalFotos} foto{totalFotos === 1 ? '' : 's'}
-          </Text>
+
+        <View style={styles.seccaoDivisoria} />
+
+        <View style={styles.seccaoColunasRow}>
+          <View style={[styles.seccaoColuna, styles.seccaoColunaComDivisor]}>
+            <Text style={styles.seccaoLabel}>VISTORIADOR RESPONSÁVEL</Text>
+            <Text style={styles.seccaoValor}>{vistoria.vistoriador?.nome || '—'}</Text>
+          </View>
+          <View style={[styles.seccaoColuna, styles.seccaoColunaLast]}>
+            <Text style={styles.seccaoLabel}>TOTAL DE FOTOS</Text>
+            <Text style={styles.seccaoValor}>
+              {totalFotos} foto{totalFotos === 1 ? '' : 's'}
+            </Text>
+          </View>
         </View>
       </View>
     </>
@@ -416,10 +410,10 @@ function Cabecalho({ vistoria, totalFotos }) {
 
 function InformacoesImovel({ vistoria }) {
   // Exibição estritamente condicional: só entra na lista (e portanto
-  // só aparece no laudo) o campo que o vistoriador de fato preencheu
-  // — nada de badge com "—" pra campo em branco. Se os quatro
-  // estiverem vazios, a seção inteira some (nada pra mostrar).
-  const badges = [
+  // só aparece no laudo) o campo que o vistoriador de fato preencheu.
+  // Se os quatro estiverem vazios, o card inteiro some (nada pra
+  // mostrar).
+  const campos = [
     { rotulo: 'ESTADO DE LIMPEZA', bruto: vistoria.estado_limpeza, opcoes: ESTADO_LIMPEZA_OPCOES },
     { rotulo: 'ENERGIA', bruto: vistoria.energia, opcoes: ENERGIA_OPCOES },
     { rotulo: 'ÁGUA', bruto: vistoria.agua, opcoes: AGUA_OPCOES },
@@ -428,18 +422,24 @@ function InformacoesImovel({ vistoria }) {
     .filter((campo) => campo.bruto)
     .map((campo) => ({ rotulo: campo.rotulo, valor: getLabelOpcao(campo.opcoes, campo.bruto) }))
 
-  if (badges.length === 0) return null
+  if (campos.length === 0) return null
 
   return (
-    <View style={styles.infoImovelWrap} wrap={false}>
-      <Text style={styles.infoImovelTitulo}>INFORMAÇÕES DO IMÓVEL</Text>
-      <View style={styles.infoImovelBadgesRow}>
-        {badges.map((badge) => (
-          <View key={badge.rotulo} style={styles.infoImovelBadge}>
-            <Text style={styles.infoImovelBadgeLabel}>{badge.rotulo}</Text>
-            <Text style={styles.infoImovelBadgeValor}>{badge.valor}</Text>
-          </View>
-        ))}
+    <View style={styles.seccaoCard} wrap={false}>
+      <Text style={styles.seccaoCardTitulo}>INFORMAÇÕES DO IMÓVEL</Text>
+      <View style={styles.seccaoColunasRow}>
+        {campos.map((campo, index) => {
+          const isLast = index === campos.length - 1
+          return (
+            <View
+              key={campo.rotulo}
+              style={[styles.seccaoColuna, isLast ? styles.seccaoColunaLast : styles.seccaoColunaComDivisor]}
+            >
+              <Text style={styles.seccaoLabel}>{campo.rotulo}</Text>
+              <Text style={styles.seccaoValor}>{campo.valor}</Text>
+            </View>
+          )
+        })}
       </View>
     </View>
   )
