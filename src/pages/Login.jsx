@@ -6,7 +6,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  Building2,
+  Search,
   CalendarCheck2,
   LayoutGrid,
   ShieldCheck
@@ -93,7 +93,7 @@ export default function Login() {
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-accent">
-              <Building2 size={20} className="text-white" strokeWidth={2.5} />
+              <Search size={20} className="text-white" strokeWidth={2.5} />
             </div>
             <div className="leading-tight">
               <p className="text-base font-bold text-brand-900">SEGUE</p>

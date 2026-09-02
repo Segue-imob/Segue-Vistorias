@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Building2, LogOut } from 'lucide-react'
+import { Search, LogOut } from 'lucide-react'
 import { NAV_ITEMS } from '../lib/navItems'
 import { useAuth } from '../context/AuthContext'
 import { PERMISSIONS, getRoleLabel } from '../lib/permissions'
@@ -23,7 +23,7 @@ export default function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-900 text-brand-cream/90 md:flex">
       <div className="flex items-center gap-2.5 px-6 py-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-accent">
-          <Building2 size={18} className="text-white" strokeWidth={2.5} />
+          <Search size={18} className="text-white" strokeWidth={2.5} />
         </div>
         <div className="leading-tight">
           <p className="text-sm font-bold tracking-wide text-white">SEGUE</p>

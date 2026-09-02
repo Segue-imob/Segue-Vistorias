@@ -40,7 +40,7 @@
 // isso também elimina qualquer fetch assíncrono durante a própria
 // renderização do PDF, evitando timing/CORS de outra natureza.
 // ------------------------------------------------------------------
-import { Document, Page, Text, View, Image, Link, StyleSheet, pdf } from '@react-pdf/renderer'
+import { Document, Page, Text, View, Image, Link, StyleSheet, pdf, Svg, Circle, Line } from '@react-pdf/renderer'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -83,7 +83,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 8
   },
-  brandMarkText: { color: '#ffffff', fontFamily: 'Helvetica-Bold', fontSize: 13 },
   brandRow: { flexDirection: 'row', alignItems: 'center' },
   brand: { fontSize: 15, fontFamily: 'Helvetica-Bold', color: CORES.brand900 },
   brandSub: { fontSize: 8, color: CORES.accent, fontFamily: 'Helvetica-Bold' },
@@ -346,6 +345,22 @@ async function prepararDadosParaPdf(vistoria, ambientes) {
   }
 }
 
+/**
+ * Ícone de lupa (mesmo desenho do ícone "Search" da lucide-react
+ * usado na interface do app) desenhado em SVG puro — o
+ * @react-pdf/renderer não tem acesso a bibliotecas de ícones, então
+ * reproduzimos a forma manualmente: um círculo + uma linha diagonal
+ * (o cabo da lupa), traço branco, sem preenchimento.
+ */
+function IconeLupaPdf({ tamanho = 16 }) {
+  return (
+    <Svg viewBox="0 0 24 24" width={tamanho} height={tamanho}>
+      <Circle cx="11" cy="11" r="8" stroke="#ffffff" strokeWidth={2.2} fill="none" />
+      <Line x1="21" y1="21" x2="16.65" y2="16.65" stroke="#ffffff" strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  )
+}
+
 function Cabecalho({ vistoria, totalFotos }) {
   const imovel = vistoria.imoveis || {}
   const endereco = [imovel.endereco, imovel.bairro, imovel.cidade].filter(Boolean).join(', ')
@@ -355,7 +370,7 @@ function Cabecalho({ vistoria, totalFotos }) {
       <View style={styles.headerBar} fixed>
         <View style={styles.brandRow}>
           <View style={styles.brandMark}>
-            <Text style={styles.brandMarkText}>S</Text>
+            <IconeLupaPdf tamanho={16} />
           </View>
           <View>
             <Text style={styles.brand}>SEGUE Vistorias</Text>

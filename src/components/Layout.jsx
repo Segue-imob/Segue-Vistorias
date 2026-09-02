@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { Building2, Menu, X } from 'lucide-react'
+import { Search, Menu, X } from 'lucide-react'
 import Sidebar from './Sidebar'
 import { NAV_ITEMS } from '../lib/navItems'
 import { useAuth } from '../context/AuthContext'
@@ -19,7 +19,7 @@ export default function Layout() {
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-brand-border bg-white px-4 py-3 md:hidden">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-accent">
-            <Building2 size={16} className="text-white" strokeWidth={2.5} />
+            <Search size={16} className="text-white" strokeWidth={2.5} />
           </div>
           <p className="text-sm font-bold text-brand-900">SEGUE Vistorias</p>
         </div>
