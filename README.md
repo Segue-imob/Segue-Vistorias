@@ -236,7 +236,7 @@ Fotos do checklist e a assinatura digital ficam em `vistorias-fotos/<vistoria_id
 
 O formulário de "Novo imóvel" fica embutido em `VistoriaModal.jsx` (colapsável, acionado pelo link "+ Novo imóvel" ao lado do seletor de Imóvel) — não é uma tela própria, é um atalho pra cadastrar o imóvel sem sair do fluxo de agendar a vistoria.
 
-**Campos, nesta ordem**: Identificação/Código → CEP (com busca automática) → Endereço/Rua → Bairro e Cidade lado a lado → botão "Salvar imóvel". Os campos **Proprietário** e **Inquilino** foram removidos do formulário — as colunas `proprietario_nome`/`inquilino_nome` continuam existindo em `imoveis` (não foram apagadas do banco, só pararam de ser coletadas aqui), então imóveis cadastrados antes dessa mudança mantêm esses dados intactos.
+**Campos, nesta ordem**: Identificação/Código → CEP (com busca automática) → Endereço/Rua e Número lado a lado → Bairro e Cidade lado a lado → Destinação (`Residencial`/`Comercial`) e Tipo de Imóvel (`Apartamento`/`Casa`/`Loja`/`Sala`/`Cobertura`/`Garden`/`Lote`/`Galpão`) lado a lado → botão "Salvar imóvel". Os campos **Proprietário** e **Inquilino** foram removidos do formulário — as colunas `proprietario_nome`/`inquilino_nome` continuam existindo em `imoveis` (não foram apagadas do banco, só pararam de ser coletadas aqui), então imóveis cadastrados antes dessa mudança mantêm esses dados intactos. `numero`/`destinacao`/`tipo_imovel` são colunas novas, sem `CHECK` (mesma lição de sempre: validação só no front).
 
 **Busca automática por CEP (ViaCEP)**: `formatarCep()` aplica a máscara `00000-000` enquanto o usuário digita; assim que os 8 dígitos estiverem completos, `handleCepChange` busca `https://viacep.com.br/ws/{cep}/json/` e preenche Endereço, Bairro e Cidade automaticamente — o usuário ainda pode editar os três campos depois, a busca só poupa digitação. Se o CEP não existir (`dados.erro`) ou a requisição falhar (rede instável, ViaCEP fora do ar), aparece um aviso abaixo do campo e o formulário continua usável normalmente pra preenchimento manual — nunca trava a tela. O valor do CEP também é salvo na coluna `imoveis.cep` (nova).
 
@@ -263,7 +263,23 @@ supabase functions deploy admin-reset-password
 
 Não é preciso configurar `SUPABASE_URL`, `SUPABASE_ANON_KEY` ou `SUPABASE_SERVICE_ROLE_KEY` manualmente — o Supabase já disponibiliza essas três variáveis automaticamente dentro de toda Edge Function do projeto. Se preferir remover essa dependência também, dá pra trocar por `supabase.auth.resetPasswordForEmail(email)` (manda um link de redefinição para o próprio usuário) — é só pedir.
 
-## Paleta oficial de status
+## Sincronização do laudo para o Solicitante
+
+Depois de finalizar a vistoria, o vistoriador vê dois botões no card "Esta vistoria já foi encerrada": **"Imprimir / Baixar Laudo PDF"** (baixa uma cópia local, como já existia) e **"Sincronizar Vistoria"** (novo) — ambos ficam lado a lado.
+
+"Sincronizar Vistoria" gera o laudo, sobe pro Storage, grava `laudo_pdf_url` e marca `vistorias.sincronizado = true`; ao terminar, mostra a mensagem de sucesso "Vistoria sincronizada com sucesso! O laudo já está disponível para o solicitante." (`sincronizarVistoria()` em `useVistoriaExecucao.js`). Diferente de `salvarLaudoPdf` (melhor esforço, nunca lança), esta função **lança em caso de erro** — é a ação principal do botão, então uma falha precisa aparecer de verdade, não ser engolida silenciosamente. Se a vistoria já foi sincronizada antes, um aviso "✓ Esta vistoria já foi sincronizada" aparece mesmo sem clicar de novo.
+
+**Por que não usei `status: 'Concluída'`, de novo**: mesma razão já explicada em `finalizarVistoria` — essa string quebraria a filtragem por status em todo o app (aba Concluídas, Kanban, badge). `sincronizado` é uma coluna booleana própria, independente de `status`, que resolve a necessidade real (sinalizar "o laudo está pronto pro solicitante") sem interferir em nada que já dependia do valor `'finalizada'`.
+
+**Acesso ao laudo pelo Administrador (`/vistorias`)**: a lista (`VistoriaListView.jsx`) agora mostra um ícone de download ao lado do badge de Status — e a mesma ação também aparece no menu `⋮` como "Visualizar / Baixar Laudo" — sempre que `status === 'finalizada'` **ou** `sincronizado === true` (não precisa dos dois; qualquer um já libera). Clicar busca os dados completos do checklist sob demanda (`buscarDadosParaLaudo()`, em `src/lib/laudoData.js` — reproduz a mesma consulta em 3 passos do `useVistoriaExecucao`, só que como função avulsa, sem estado de React, porque a lista não pode pré-carregar o checklist inteiro de toda vistoria de uma vez), gera o PDF e abre numa nova aba.
+
+Um detalhe técnico da implementação: a aba nova é aberta **de forma síncrona**, no exato momento do clique (`window.open('', '_blank')`, antes de qualquer `await`) — só depois disso a busca e a geração do PDF acontecem, e o resultado é jogado na aba já aberta (`novaAba.location.href = urlObjeto`). Se a aba fosse aberta só depois do PDF pronto, a maioria dos navegadores bloquearia como pop-up, já que a chamada não aconteceria mais "durante" o gesto de clique do usuário.
+
+**Sobre "remover restrição de visualização baseada no ID do usuário"**: verifiquei as políticas de RLS de `vistoria_ambientes`/`vistoria_itens`/`vistoria_fotos` e o hook `useVistorias.js` antes de mexer — não existe nenhuma restrição dessas hoje. Todas as políticas de `select` dessas três tabelas já incluem `is_admin() or is_gestao() or ...`, e `useVistorias()` sem um `vistoriadorId` explícito (como é usado em `/vistorias`) já traz todas as vistorias, de qualquer vistoriador. Não havia nada pra remover — o Administrador já tinha acesso completo; só faltava a interface pra usar esse acesso, que é o que essa entrega adiciona.
+
+**Não mexi no Kanban** (`KanbanBoard.jsx`) — o pedido descreveu especificamente "a linha do registro... ao lado da tag de Status", que é um conceito de tabela/lista. Se quiser o mesmo botão nos cards do Kanban, é uma extensão pequena a partir daqui.
+
+
 
 | Status      | Cor       |
 |-------------|-----------|

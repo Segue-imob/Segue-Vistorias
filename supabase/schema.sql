@@ -557,3 +557,18 @@ alter table public.vistorias add column if not exists gas text;
 -- Bloco idempotente: seguro rodar de novo.
 -- ============================================================
 alter table public.imoveis add column if not exists cep text;
+
+-- ============================================================
+-- Novos campos de imóvel (Número, Destinação, Tipo de Imóvel) e
+-- sinalizador de sincronização da vistoria (`sincronizado`) — usado
+-- pelo botão "Sincronizar Vistoria" do vistoriador para liberar o
+-- laudo ao Solicitante, independente do texto de `status`.
+-- Sem CHECK nos campos novos de imóvel, de propósito (mesma lição
+-- da mudança de escala de condição do item): validação de opções
+-- fica só no front, menos atrito a cada ajuste futuro de rótulo.
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+alter table public.imoveis add column if not exists numero text;
+alter table public.imoveis add column if not exists destinacao text;
+alter table public.imoveis add column if not exists tipo_imovel text;
+alter table public.vistorias add column if not exists sincronizado boolean not null default false;

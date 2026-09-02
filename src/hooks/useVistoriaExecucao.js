@@ -683,6 +683,49 @@ export function useVistoriaExecucao(vistoriaId) {
     [vistoriaId]
   )
 
+  /**
+   * "Sincronizar Vistoria" — ação do vistoriador que libera o laudo
+   * pro Solicitante: gera o PDF (feito por quem chama, via
+   * gerarLaudoPdfBlob), sobe pro Storage, grava `laudo_pdf_url` e
+   * marca `sincronizado: true`. Ao contrário de `salvarLaudoPdf`
+   * (melhor esforço, nunca lança), esta função LANÇA em caso de erro
+   * — é a ação principal do botão, então uma falha precisa aparecer
+   * de verdade pro vistoriador, não ser engolida silenciosamente.
+   *
+   * Não usei `status: 'Concluída'` de propósito — é a mesma razão já
+   * documentada em `finalizarVistoria`: essa string quebraria toda a
+   * filtragem por status do app (aba Concluídas, Kanban, badge). O
+   * campo `sincronizado` (booleano, coluna própria) já resolve a
+   * necessidade real sem tocar em `status`.
+   */
+  const sincronizarVistoria = useCallback(
+    async (blob) => {
+      const path = `${vistoriaId}/laudo/${Date.now()}.pdf`
+      const { error: upErr } = await supabase.storage
+        .from(FOTOS_BUCKET)
+        .upload(path, blob, { contentType: 'application/pdf' })
+      if (upErr) {
+        console.error('[useVistoriaExecucao] Erro do Supabase ao subir o laudo pro Storage:', upErr.message, upErr)
+        throw upErr
+      }
+
+      const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
+
+      const { error: updErr } = await supabase
+        .from('vistorias')
+        .update({ laudo_pdf_url: pub.publicUrl, sincronizado: true })
+        .eq('id', vistoriaId)
+      if (updErr) {
+        console.error('[useVistoriaExecucao] Erro do Supabase ao sincronizar a vistoria:', updErr.message, updErr)
+        throw updErr
+      }
+
+      setVistoria((v) => (v ? { ...v, laudo_pdf_url: pub.publicUrl, sincronizado: true } : v))
+      return pub.publicUrl
+    },
+    [vistoriaId]
+  )
+
   return {
     vistoria,
     ambientes,
@@ -701,6 +744,7 @@ export function useVistoriaExecucao(vistoriaId) {
     aceitarVistoria,
     finalizarVistoria,
     salvarLaudoPdf,
+    sincronizarVistoria,
     updateInfoGeral
   }
 }

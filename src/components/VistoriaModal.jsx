@@ -19,9 +19,15 @@ const emptyNovoImovel = {
   codigo_imovel: '',
   cep: '',
   endereco: '',
+  numero: '',
   bairro: '',
-  cidade: ''
+  cidade: '',
+  destinacao: '',
+  tipo_imovel: ''
 }
+
+const DESTINACAO_OPCOES = ['Residencial', 'Comercial']
+const TIPO_IMOVEL_OPCOES = ['Apartamento', 'Casa', 'Loja', 'Sala', 'Cobertura', 'Garden', 'Lote', 'Galpão']
 
 /** Aplica a máscara 00000-000 enquanto o usuário digita o CEP. */
 function formatarCep(valor) {
@@ -209,12 +215,20 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
                 {cepErro && <p className="mt-1 text-xs font-medium text-amber-600">{cepErro}</p>}
               </div>
 
-              <input
-                placeholder="Endereço / Rua *"
-                className="input-field"
-                value={novoImovel.endereco}
-                onChange={(e) => setNovoImovel((f) => ({ ...f, endereco: e.target.value }))}
-              />
+              <div className="grid grid-cols-[2fr_1fr] gap-2">
+                <input
+                  placeholder="Endereço / Rua *"
+                  className="input-field"
+                  value={novoImovel.endereco}
+                  onChange={(e) => setNovoImovel((f) => ({ ...f, endereco: e.target.value }))}
+                />
+                <input
+                  placeholder="Número"
+                  className="input-field"
+                  value={novoImovel.numero}
+                  onChange={(e) => setNovoImovel((f) => ({ ...f, numero: e.target.value }))}
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <input
@@ -229,6 +243,33 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
                   value={novoImovel.cidade}
                   onChange={(e) => setNovoImovel((f) => ({ ...f, cidade: e.target.value }))}
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  className="input-field"
+                  value={novoImovel.destinacao}
+                  onChange={(e) => setNovoImovel((f) => ({ ...f, destinacao: e.target.value }))}
+                >
+                  <option value="">Destinação</option>
+                  {DESTINACAO_OPCOES.map((opcao) => (
+                    <option key={opcao} value={opcao}>
+                      {opcao}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="input-field"
+                  value={novoImovel.tipo_imovel}
+                  onChange={(e) => setNovoImovel((f) => ({ ...f, tipo_imovel: e.target.value }))}
+                >
+                  <option value="">Tipo de imóvel</option>
+                  {TIPO_IMOVEL_OPCOES.map((opcao) => (
+                    <option key={opcao} value={opcao}>
+                      {opcao}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <button

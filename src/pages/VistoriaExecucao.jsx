@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileDown, Loader2, MapPin, Plus } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileDown, Loader2, MapPin, Plus, RefreshCw } from 'lucide-react'
 import { useVistoriaExecucao } from '../hooks/useVistoriaExecucao'
 import { useAuth } from '../context/AuthContext'
 import { isAdmin } from '../lib/permissions'
@@ -11,6 +11,7 @@ import FinalizarVistoriaModal from '../components/execucao/FinalizarVistoriaModa
 import PhotoLightbox from '../components/execucao/PhotoLightbox'
 import ConfirmDialog from '../components/ConfirmDialog'
 import StatusBadge from '../components/StatusBadge'
+import SuccessBanner from '../components/SuccessBanner'
 import { AMBIENTES_PADRAO, buildMapsUrl, montarNomeArquivoLaudo } from '../lib/vistoriaExecucao'
 import { gerarLaudoPdfBlob } from '../lib/laudoPdf'
 
@@ -35,6 +36,7 @@ export default function VistoriaExecucao() {
     removeFotoItem,
     finalizarVistoria,
     salvarLaudoPdf,
+    sincronizarVistoria,
     updateInfoGeral
   } = useVistoriaExecucao(id)
 
@@ -53,6 +55,9 @@ export default function VistoriaExecucao() {
   const [finalizarOpen, setFinalizarOpen] = useState(false)
   const [gerandoPdf, setGerandoPdf] = useState(false)
   const [pdfErrorMsg, setPdfErrorMsg] = useState('')
+  const [sincronizando, setSincronizando] = useState(false)
+  const [sincronizarSucesso, setSincronizarSucesso] = useState('')
+  const [sincronizarErro, setSincronizarErro] = useState('')
   const [infoGeralError, setInfoGeralError] = useState('')
 
   // Lightbox global de fotos — navega por TODAS as fotos da vistoria
@@ -210,6 +215,22 @@ export default function VistoriaExecucao() {
     }
   }
 
+  const handleSincronizar = async () => {
+    setSincronizando(true)
+    setSincronizarErro('')
+    setSincronizarSucesso('')
+    try {
+      const blob = await gerarLaudoPdfBlob(vistoria, ambientes)
+      await sincronizarVistoria(blob)
+      setSincronizarSucesso('Vistoria sincronizada com sucesso! O laudo já está disponível para o solicitante.')
+    } catch (err) {
+      console.error('[VistoriaExecucao] Erro ao sincronizar a vistoria:', err.message, err)
+      setSincronizarErro(err.message || 'Erro ao sincronizar a vistoria.')
+    } finally {
+      setSincronizando(false)
+    }
+  }
+
   // ---- Lightbox global de fotos ----
   const handleAbrirFoto = (foto) => setFotoAmpliadaId(foto.id)
   const handleFecharLightbox = () => setFotoAmpliadaId(null)
@@ -342,16 +363,39 @@ export default function VistoriaExecucao() {
             <div className="card border-l-4 border-l-[#4CAF50] p-4">
               <p className="text-sm font-semibold text-brand-900">Esta vistoria já foi encerrada.</p>
               <p className="mt-0.5 text-xs text-slate-500">O checklist abaixo está em modo somente leitura.</p>
-              <button
-                type="button"
-                onClick={handleGerarLaudo}
-                disabled={gerandoPdf}
-                className="btn-primary mt-3 !py-2 text-xs"
-              >
-                {gerandoPdf ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-                Imprimir / Baixar Laudo PDF
-              </button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleGerarLaudo}
+                  disabled={gerandoPdf}
+                  className="btn-primary !py-2 text-xs"
+                >
+                  {gerandoPdf ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+                  Imprimir / Baixar Laudo PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSincronizar}
+                  disabled={sincronizando}
+                  className="btn-secondary !py-2 text-xs"
+                  title="Gera o laudo, envia pro Storage e libera o acesso para o Solicitante"
+                >
+                  {sincronizando ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                  Sincronizar Vistoria
+                </button>
+              </div>
               {pdfErrorMsg && <p className="mt-2 text-xs font-medium text-red-500">{pdfErrorMsg}</p>}
+              {sincronizarErro && <p className="mt-2 text-xs font-medium text-red-500">{sincronizarErro}</p>}
+              {sincronizarSucesso && (
+                <div className="mt-2">
+                  <SuccessBanner message={sincronizarSucesso} />
+                </div>
+              )}
+              {vistoria.sincronizado && !sincronizarSucesso && (
+                <p className="mt-2 text-xs font-medium text-[#2E7D32]">
+                  ✓ Esta vistoria já foi sincronizada — o laudo está disponível para o solicitante.
+                </p>
+              )}
             </div>
           )}
 
