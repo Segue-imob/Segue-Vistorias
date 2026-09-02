@@ -1,18 +1,16 @@
 import { useMemo, useState } from 'react'
-import { LayoutList, LayoutGrid, Search, Plus, Loader2 } from 'lucide-react'
+import { Search, Plus, Loader2 } from 'lucide-react'
 import { useVistorias } from '../hooks/useVistorias'
 import { useAuth } from '../context/AuthContext'
 import { canEditVistoria, canDeleteVistoria } from '../lib/permissions'
 import VistoriaModal from '../components/VistoriaModal'
 import VistoriaListView from '../components/VistoriaListView'
-import KanbanBoard from '../components/KanbanBoard'
 import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function Vistorias() {
   const { profile, role } = useAuth()
   const { vistorias, loading, createVistoria, updateVistoria, updateStatus, removeVistoria } = useVistorias()
 
-  const [view, setView] = useState('lista') // 'lista' | 'kanban'
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingVistoria, setEditingVistoria] = useState(null)
@@ -76,59 +74,27 @@ export default function Vistorias() {
         </button>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            className="input-field !pl-9"
-            placeholder="Buscar por código, endereço, inquilino ou proprietário..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        <div className="flex items-center gap-1 self-start rounded-lg border border-brand-border bg-white p-1">
-          <button
-            type="button"
-            onClick={() => setView('lista')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              view === 'lista' ? 'bg-brand-accent text-white' : 'text-slate-500 hover:bg-brand-cream'
-            }`}
-          >
-            <LayoutList size={14} /> Lista
-          </button>
-          <button
-            type="button"
-            onClick={() => setView('kanban')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              view === 'kanban' ? 'bg-brand-accent text-white' : 'text-slate-500 hover:bg-brand-cream'
-            }`}
-          >
-            <LayoutGrid size={14} /> Kanban
-          </button>
-        </div>
+      <div className="relative w-full sm:max-w-sm">
+        <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          className="input-field !pl-9"
+          placeholder="Buscar por código, endereço, inquilino ou proprietário..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20 text-slate-400">
           <Loader2 className="animate-spin" size={22} />
         </div>
-      ) : view === 'lista' ? (
+      ) : (
         <VistoriaListView
           vistorias={filteredVistorias}
           onChangeStatus={updateStatus}
           onEdit={openEdit}
           onDelete={setDeleteTarget}
           canEdit={(v) => canEditVistoria(v, profile, role)}
-          canDelete={podeExcluir}
-        />
-      ) : (
-        <KanbanBoard
-          vistorias={filteredVistorias}
-          onChangeStatus={updateStatus}
-          onEdit={openEdit}
-          onDelete={setDeleteTarget}
-          canEditFn={(v) => canEditVistoria(v, profile, role)}
           canDelete={podeExcluir}
         />
       )}
@@ -144,7 +110,7 @@ export default function Vistorias() {
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         title="Excluir vistoria"
-        description="Tem certeza que deseja excluir permanentemente esta vistoria? Esta ação não afetará os dados históricos."
+        description="Tem certeza que deseja apagar esta vistoria? Todos os ambientes, itens e fotos associados serão excluídos permanentemente."
         confirmLabel="Excluir vistoria"
         danger
         onConfirm={handleDeleteConfirm}

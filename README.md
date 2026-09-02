@@ -6,7 +6,7 @@ Painel de gestão de vistorias para a **SEGUE Imobiliária** — React + Tailwin
 
 - **Login (`/login`)** — split-screen: formulário de acesso à esquerda (e-mail/senha via `supabase.auth.signInWithPassword`, com visualizador de senha) e apresentação do produto à direita. Rota pública; redireciona para `/` após login bem-sucedido, e para `/login` sempre que não houver sessão válida.
 - **Agenda** — calendário mensal com badges de vistorias coloridas por status, painel do dia selecionado, filtros por vistoriador/tipo e botão "Agendar Vistoria". Acesso: Administrador e Gestão.
-- **Vistorias** — listagem com busca (código, endereço, bairro, cidade, inquilino/proprietário), alternância Lista ↔ Kanban (drag and drop entre colunas) e botão "+ Agendar Vistoria". Acesso: Administrador.
+- **Vistorias** — listagem em formato de tabela, com busca (código, endereço, bairro, cidade, inquilino/proprietário) e botão "+ Agendar Vistoria". Acesso: Administrador.
 - **Minhas Vistorias (`/minhas-vistorias`)** — painel mobile-first do Vistoriador, com abas **Novas** (aguardando aceite), **Em Andamento** e **Concluídas**. Cada card tem "Abrir no Mapa" (Google Maps a partir do endereço do imóvel) e, nas Novas, "Aceitar Vistoria". Acesso: Vistoriador.
 - **Execução de Vistoria (`/minhas-vistorias/:id`)** — checklist ambiente por ambiente (Sala, Cozinha, Quarto, Banheiro, Varanda ou nome customizado), com 6 itens por ambiente (Piso, Parede, Teto, Portas, Janelas, Tomadas/Interruptores) avaliados como Bom/Regular/Avariado/Ausente, observação em texto e upload de fotos (com atalho direto para a câmera no celular). Botão fixo "Finalizar Vistoria" abre um modal de encerramento com resumo do checklist, assinatura digital em canvas e o botão "Finalizar e Salvar Vistoria", que grava a assinatura no Storage e muda o status para `finalizada`. Acesso: Vistoriador.
 - **Usuários** — tabela de equipe com cadastro completo (Auth + `profiles`, com senha), edição de perfil e redefinição de senha via menu de ações, e toggle Ativo/Inativo. Acesso: Administrador.
@@ -54,12 +54,14 @@ O acesso é controlado pela coluna `role` de `profiles`, com três perfis:
 
 ## Editar e excluir vistoria
 
-Disponível nos três lugares onde uma vistoria aparece como card/linha — **Agenda** (painel do dia), **Vistorias → Kanban** e **Vistorias → Lista**:
+Disponível nos dois lugares onde uma vistoria aparece como card/linha — **Agenda** (painel do dia) e **Vistorias → Lista**:
 
+- **Visualizar / Baixar Laudo** (ícone de download): só aparece quando `status === 'finalizada'` ou `sincronizado === true`. Vem primeiro no menu `⋮` da lista de Vistorias.
+- **Excluir** (ícone de lixeira, texto em vermelho): só aparece para Administrador — logo após "Visualizar / Baixar Laudo" no menu. Abre `ConfirmDialog` com o texto "Tem certeza que deseja apagar esta vistoria? Todos os ambientes, itens e fotos associados serão excluídos permanentemente." — ao confirmar, `useVistorias().removeVistoria` faz um `DELETE` físico na tabela `vistorias` (diferente de `deleteVistoria`, que só cancela) e remove a linha do estado local na hora, sem esperar o Realtime. O `DELETE` já propaga em cascata pro banco inteiro (`vistoria_ambientes` → `vistoria_itens`/`vistoria_fotos`, todos com `on delete cascade` desde o schema original) — apagar a vistoria já apaga tudo associado a ela.
 - **Editar** (ícone de lápis): permitido para Administrador, Gestão, ou quem agendou a vistoria (`vistorias.criado_por`). Abre o mesmo `VistoriaModal` usado para agendar, pré-preenchido com Tipo, Data, Hora, Vistoriador responsável e Observações — o imóvel fica travado (não editável) porque não estava na lista de campos editáveis pedida. Ao salvar, faz um `UPDATE` (`useVistorias().updateVistoria`) em vez de criar uma vistoria nova.
-- **Excluir** (ícone de lixeira): só aparece para Administrador. Abre `ConfirmDialog` com o texto "Tem certeza que deseja excluir permanentemente esta vistoria? Esta ação não afetará os dados históricos." — ao confirmar, `useVistorias().removeVistoria` faz um `DELETE` físico na tabela `vistorias` (diferente de `deleteVistoria`, que só cancela) e remove a linha do estado local na hora, sem esperar o Realtime.
 - `criado_por` é uma coluna nova em `vistorias` (uuid → `profiles.id`), preenchida automaticamente com o usuário logado no momento do agendamento. As regras de "quem pode editar/excluir" vivem em `src/lib/permissions.js` (`canEditVistoria`, `canDeleteVistoria`) e são espelhadas na policy de `UPDATE` do Postgres em `schema.sql` (o `DELETE` já era restrito ao Administrador desde a policy criada para a hierarquia de roles).
-- No Kanban, os botões ficam num container com `draggable={false}` + `stopPropagation` no `mousedown`, para não conflitar com o arrastar-e-soltar do card.
+
+**A tela Vistorias não tem mais alternância Lista ↔ Kanban** — ficou só no formato de tabela. `KanbanBoard.jsx` continua no repositório (não deletei o arquivo), só não é mais importado por `Vistorias.jsx`; é reaproveitável se quiser reintroduzir uma visão em quadro no futuro.
 
 ## Execução de vistoria (checklist do Vistoriador)
 
@@ -277,7 +279,7 @@ Um detalhe técnico da implementação: a aba nova é aberta **de forma síncron
 
 **Sobre "remover restrição de visualização baseada no ID do usuário"**: verifiquei as políticas de RLS de `vistoria_ambientes`/`vistoria_itens`/`vistoria_fotos` e o hook `useVistorias.js` antes de mexer — não existe nenhuma restrição dessas hoje. Todas as políticas de `select` dessas três tabelas já incluem `is_admin() or is_gestao() or ...`, e `useVistorias()` sem um `vistoriadorId` explícito (como é usado em `/vistorias`) já traz todas as vistorias, de qualquer vistoriador. Não havia nada pra remover — o Administrador já tinha acesso completo; só faltava a interface pra usar esse acesso, que é o que essa entrega adiciona.
 
-**Não mexi no Kanban** (`KanbanBoard.jsx`) — o pedido descreveu especificamente "a linha do registro... ao lado da tag de Status", que é um conceito de tabela/lista. Se quiser o mesmo botão nos cards do Kanban, é uma extensão pequena a partir daqui.
+**Kanban removido da tela Vistorias** nesta mesma leva de mudanças — ver "A tela Vistorias não tem mais alternância Lista ↔ Kanban" logo acima na seção "Editar e excluir vistoria".
 
 
 

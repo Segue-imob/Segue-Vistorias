@@ -136,18 +136,6 @@ export default function VistoriaListView({ vistorias, onChangeStatus, onEdit, on
                           <FileDown size={13} /> Visualizar / Baixar Laudo
                         </button>
                       )}
-                      {podeEditar && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onEdit(v)
-                            setOpenMenuId(null)
-                          }}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-slate-600 hover:bg-brand-cream"
-                        >
-                          <Pencil size={13} /> Editar vistoria
-                        </button>
-                      )}
                       {podeExcluir && (
                         <button
                           type="button"
@@ -158,6 +146,18 @@ export default function VistoriaListView({ vistorias, onChangeStatus, onEdit, on
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-red-600 hover:bg-red-50"
                         >
                           <Trash2 size={13} /> Excluir vistoria
+                        </button>
+                      )}
+                      {podeEditar && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onEdit(v)
+                            setOpenMenuId(null)
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium text-slate-600 hover:bg-brand-cream"
+                        >
+                          <Pencil size={13} /> Editar vistoria
                         </button>
                       )}
                       {(temLaudo || podeEditar || podeExcluir) && <div className="my-1 border-t border-brand-border/70" />}
