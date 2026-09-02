@@ -9,7 +9,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function Vistorias() {
   const { profile, role } = useAuth()
-  const { vistorias, loading, createVistoria, updateVistoria, updateStatus, removeVistoria } = useVistorias()
+  const { vistorias, loading, createVistoria, updateVistoria, removeVistoria } = useVistorias()
 
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -91,7 +91,6 @@ export default function Vistorias() {
       ) : (
         <VistoriaListView
           vistorias={filteredVistorias}
-          onChangeStatus={updateStatus}
           onEdit={openEdit}
           onDelete={setDeleteTarget}
           canEdit={(v) => canEditVistoria(v, profile, role)}

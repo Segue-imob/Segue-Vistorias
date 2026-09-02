@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, CheckCircle2, FileDown, History, Loader2, MapPin, Plus, RefreshCw } from 'lucide-react'
 import { useVistoriaExecucao } from '../hooks/useVistoriaExecucao'
@@ -36,6 +36,7 @@ export default function VistoriaExecucao() {
     updateItemObservacao,
     addFotoItem,
     removeFotoItem,
+    aceitarVistoria,
     finalizarVistoria,
     salvarLaudoPdf,
     sincronizarVistoria,
@@ -103,6 +104,24 @@ export default function VistoriaExecucao() {
 
   const indiceFotoAmpliada = todasFotos.findIndex((f) => f.id === fotoAmpliadaId)
   const fotoAmpliada = indiceFotoAmpliada >= 0 ? todasFotos[indiceFotoAmpliada] : null
+
+  // Automação de status: assim que o VISTORIADOR (não o Administrador
+  // navegando/conferindo) abre uma vistoria ainda "agendada", ela
+  // passa pra "aceita" sozinha — não existe mais troca manual de
+  // status em lugar nenhum do app; cada valor só muda por uma ação
+  // real do sistema (criação -> agendada, abrir em campo -> aceita,
+  // finalizar -> finalizada). `jaTentouAceitar` evita repetir a
+  // chamada a cada re-render depois da primeira tentativa.
+  const jaTentouAceitar = useRef(false)
+  useEffect(() => {
+    if (!vistoria || isAdmin(role)) return
+    if (vistoria.status !== 'agendada') return
+    if (jaTentouAceitar.current) return
+    jaTentouAceitar.current = true
+    aceitarVistoria().catch((err) => {
+      console.error('[VistoriaExecucao] Erro ao aceitar automaticamente a vistoria:', err.message, err)
+    })
+  }, [vistoria, role, aceitarVistoria])
 
   if (loading) {
     return (

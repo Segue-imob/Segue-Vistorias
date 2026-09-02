@@ -56,12 +56,22 @@ O acesso é controlado pela coluna `role` de `profiles`, com três perfis:
 
 Disponível nos dois lugares onde uma vistoria aparece como card/linha — **Agenda** (painel do dia) e **Vistorias → Lista**:
 
-- **Visualizar / Baixar Laudo** (ícone de download): só aparece quando `status === 'finalizada'` ou `sincronizado === true`. Vem primeiro no menu `⋮` da lista de Vistorias.
-- **Excluir** (ícone de lixeira, texto em vermelho): só aparece para Administrador — logo após "Visualizar / Baixar Laudo" no menu. Abre `ConfirmDialog` com o texto "Tem certeza que deseja apagar esta vistoria? Todos os ambientes, itens e fotos associados serão excluídos permanentemente." — ao confirmar, `useVistorias().removeVistoria` faz um `DELETE` físico na tabela `vistorias` (diferente de `deleteVistoria`, que só cancela) e remove a linha do estado local na hora, sem esperar o Realtime. O `DELETE` já propaga em cascata pro banco inteiro (`vistoria_ambientes` → `vistoria_itens`/`vistoria_fotos`, todos com `on delete cascade` desde o schema original) — apagar a vistoria já apaga tudo associado a ela.
+- **Sem menu `⋮` na tela Vistorias**: as três ações (Visualizar/Baixar Laudo, Editar, Excluir) aparecem como ícones diretos numa coluna "Ações" própria — nada de menu suspenso pra abrir primeiro. Cada ícone só aparece quando a ação é permitida (a mesma lógica de permissão de antes, só que decidindo visibilidade do ícone em vez de um item de menu).
+- **Sem troca manual de status**: o dropdown "Mover para {status}" foi removido de vez da tela Vistorias — o status muda **só** por ação real do sistema (ver seção "Automação de status", logo abaixo).
+- **Visualizar / Baixar Laudo** (ícone de download): só aparece quando `status === 'finalizada'` ou `sincronizado === true`.
+- **Excluir** (ícone de lixeira, vermelho): só aparece para Administrador. Abre `ConfirmDialog` com o texto "Tem certeza que deseja apagar esta vistoria? Todos os ambientes, itens e fotos associados serão excluídos permanentemente." — ao confirmar, `useVistorias().removeVistoria` faz um `DELETE` físico na tabela `vistorias` (diferente de `deleteVistoria`, que só cancela) e remove a linha do estado local na hora, sem esperar o Realtime. O `DELETE` já propaga em cascata pro banco inteiro (`vistoria_ambientes` → `vistoria_itens`/`vistoria_fotos`, todos com `on delete cascade` desde o schema original) — apagar a vistoria já apaga tudo associado a ela.
 - **Editar** (ícone de lápis): permitido para Administrador, Gestão, ou quem agendou a vistoria (`vistorias.criado_por`). Abre o mesmo `VistoriaModal` usado para agendar, pré-preenchido com Tipo, Data, Hora, Vistoriador responsável e Observações — o imóvel fica travado (não editável) porque não estava na lista de campos editáveis pedida. Ao salvar, faz um `UPDATE` (`useVistorias().updateVistoria`) em vez de criar uma vistoria nova.
 - `criado_por` é uma coluna nova em `vistorias` (uuid → `profiles.id`), preenchida automaticamente com o usuário logado no momento do agendamento. As regras de "quem pode editar/excluir" vivem em `src/lib/permissions.js` (`canEditVistoria`, `canDeleteVistoria`) e são espelhadas na policy de `UPDATE` do Postgres em `schema.sql` (o `DELETE` já era restrito ao Administrador desde a policy criada para a hierarquia de roles).
 
 **A tela Vistorias não tem mais alternância Lista ↔ Kanban** — ficou só no formato de tabela. `KanbanBoard.jsx` continua no repositório (não deletei o arquivo), só não é mais importado por `Vistorias.jsx`; é reaproveitável se quiser reintroduzir uma visão em quadro no futuro.
+
+### Automação de status (sem troca manual em lugar nenhum da tela Vistorias)
+
+Cada valor de `vistorias.status` muda por uma ação real do sistema, nunca por um seletor manual:
+
+- **`agendada`** — definido no momento da criação, em `VistoriaModal.handleSubmit` (`payload.status = 'agendada'`, só ao criar, nunca ao editar).
+- **`aceita`** — `aceitarVistoria()` já existia no hook desde uma entrega anterior, mas **nunca era chamada em lugar nenhum** — conferi antes de mexer nessa tela e encontrei essa lacuna. Corrigi agora: um `useEffect` em `VistoriaExecucao.jsx` chama `aceitarVistoria()` automaticamente assim que o **vistoriador** (não o Administrador navegando/conferindo — `isAdmin(role)` fica de fora) abre uma vistoria que ainda está `agendada`. Uma ref (`jaTentouAceitar`) evita repetir a chamada a cada re-render.
+- **`finalizada`** — já era automático desde a entrega do botão "Finalizar Vistoria" (`finalizarVistoria()`, com a assinatura digital). Continua exatamente igual.
 
 ## Execução de vistoria (checklist do Vistoriador)
 
