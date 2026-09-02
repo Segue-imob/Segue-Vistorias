@@ -53,9 +53,22 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
   const imovel = vistoria.imoveis || {}
   const endereco = [imovel.endereco, imovel.bairro, imovel.cidade].filter(Boolean).join(', ')
 
+  // @page é uma regra global — não importa onde o <style> fica no
+  // DOM, ela vale pra impressão da página inteira (Ctrl+P do
+  // navegador). Garante respiro de margem em relação ao que o
+  // próprio navegador desenha como cabeçalho/rodapé de impressão.
+  const estiloImpressao = (
+    <style>{`
+      @page {
+        margin: 15mm 10mm 15mm 10mm;
+      }
+    `}</style>
+  )
+
   if (vistoria.laudo_pdf_url) {
     return (
       <div className="space-y-3">
+        {estiloImpressao}
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-brand-900">PDF já sincronizado</p>
           <a
@@ -81,6 +94,7 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
 
   return (
     <div className="space-y-5">
+      {estiloImpressao}
       <p className="text-xs text-slate-400">
         Esta vistoria ainda não tem um PDF salvo — exibindo o laudo montado na hora, direto dos dados atuais.
       </p>
@@ -197,27 +211,33 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
                     {item.observacao && <p className="mt-1.5 pl-5 text-base text-slate-500">{item.observacao}</p>}
                   </div>
                   {(item.vistoria_fotos || []).length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2 pl-4">
+                    <div className="mt-2 flex flex-wrap gap-3 pl-4">
                       {(item.vistoria_fotos || []).map((foto) => (
-                        <button
-                          key={foto.id}
-                          type="button"
-                          onClick={() =>
-                            onOpenFoto({
-                              ...foto,
-                              ambienteNome: ambiente.ambiente || ambiente.nome,
-                              itemNome: nomeItem
-                            })
-                          }
-                          className="relative aspect-[4/3] w-32 shrink-0 overflow-hidden rounded-lg border border-brand-border break-inside-avoid"
-                        >
-                          <img src={foto.url} alt="Foto do item" className="h-full w-full object-cover" />
-                          {foto.created_at && (
-                            <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 rounded border border-[#e5e7eb] bg-white px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-slate-900 shadow-sm">
-                              {formatarCarimboFoto(foto.created_at)}
-                            </span>
-                          )}
-                        </button>
+                        <div key={foto.id} className="w-32 shrink-0 break-inside-avoid">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenFoto({
+                                ...foto,
+                                ambienteNome: ambiente.ambiente || ambiente.nome,
+                                itemNome: nomeItem
+                              })
+                            }
+                            className="relative block aspect-[4/3] w-32 overflow-hidden rounded-lg border border-brand-border"
+                          >
+                            <img src={foto.url} alt="Foto do item" className="h-full w-full object-cover" />
+                            {foto.created_at && (
+                              <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 rounded border border-[#e5e7eb] bg-white px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-slate-900 shadow-sm">
+                                {formatarCarimboFoto(foto.created_at)}
+                              </span>
+                            )}
+                          </button>
+                          {/* Legenda centralizada com o nome do item —
+                              repetida em cada foto de propósito, ajuda
+                              a identificar de qual item é mesmo se a
+                              foto acabar isolada. */}
+                          <p className="mt-1 text-center text-xs font-medium text-slate-700">{nomeItem}</p>
+                        </div>
                       ))}
                     </div>
                   )}

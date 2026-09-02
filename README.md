@@ -163,7 +163,17 @@ Atualizada em `ESTADOS_ITEM` (`src/lib/vistoriaExecucao.js`) — fonte única us
 
 Antes, "Ótimo" e "Bom" usavam dois tons de verde bem parecidos (`#16A34A` e `#65A30D`) — difícil de distinguir à primeira vista. A troca pra azul/verde deixa as quatro condições visualmente inconfundíveis.
 
-### Alinhamento visual exato com a referência (cores, divisórias, badge)
+### Legenda com nome do item abaixo de cada foto + correção de fotos cortadas na margem
+
+**Bug real encontrado e corrigido — fotos cortadas ao meio na margem inferior da página**: analisei um laudo gerado (anexado na entrega) e confirmei — uma linha de fotos aparecia sliced bem no rodapé de uma página, cada foto mostrando só a metade de cima. A causa: `wrap={false}` na foto individual, dentro de uma grade com `flexWrap: 'wrap'`, não é suficiente pro `@react-pdf/renderer` — a decisão de "isso cabe na página atual?" não enxergava a linha inteira como uma unidade, só fotos soltas, e às vezes deixava uma foto começar mas não terminar antes da quebra. A correção: as fotos de cada item agora são agrupadas em **linhas explícitas de até 3** (`agruparEmLinhas()`), e cada linha — não cada foto — é o bloco `wrap={false}`. Esse é o padrão mais confiável do `react-pdf` pra grades que precisam de "manter linha inteira junta" na paginação; deixar o `flexWrap` decidir sozinho onde cada item cai, mesmo com `wrap={false}` no item, se mostrou insuficiente.
+
+**Legenda com o nome do item abaixo de cada foto**: reintroduzi isso — tinha sido removido numa entrega anterior por parecer redundante já que as fotos ficam agrupadas visualmente sob o texto do item. A referência que você mandou deixou claro que vale ter de qualquer forma (útil se a foto for vista isolada, por exemplo depois de recortada de um PDF impresso). Centralizada, tamanho pequeno e legível, com uma margem superior curta — no PDF (`photoLegenda`, `fontSize: 8`) e no HTML (`text-xs font-medium`, abaixo do botão da foto, dentro do mesmo container `break-inside-avoid`).
+
+**Corrigido de passagem, achado ao revisar a mesma página**: "Condição: Bom" e "· Funcionamento: Sim" apareciam colados, sem espaço entre eles ("Bom· Funcionamento") — os espaços em branco no início do texto de Funcionamento (que era um `<Text>` separado, desde a correção do bug de texto aninhado da entrega anterior) estavam sendo cortados na renderização. Troquei por `marginLeft: 8` no estilo em vez de depender de espaços em branco no início da string.
+
+**Margens de impressão da versão HTML**: adicionei `@page { margin: 15mm 10mm 15mm 10mm; }` dentro de `LaudoConteudo.jsx` (um `<style>` injetado no componente — `@page` é uma regra global de impressão, não importa onde o `<style>` fica no DOM) — garante respiro quando o usuário imprime a página do laudo diretamente pelo navegador (Ctrl+P), em vez de depender só do PDF gerado pelo botão "Baixar PDF".
+
+
 
 Ajustei valores específicos pra bater exatamente com uma imagem de referência do laudo em HTML que você anexou:
 

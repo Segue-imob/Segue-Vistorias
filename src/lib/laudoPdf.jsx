@@ -173,15 +173,16 @@ const styles = StyleSheet.create({
   itemDot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
   itemCondicaoTexto: { fontSize: 10.5, color: CORES.brand900 },
   itemCondicaoStatus: { fontFamily: 'Helvetica-Bold' },
-  itemFuncionamentoTexto: { fontSize: 10.5, color: CORES.brand700 },
+  itemFuncionamentoTexto: { fontSize: 10.5, color: CORES.brand700, marginLeft: 8 },
   itemObservacao: { fontSize: 9.5, color: CORES.brand700, marginTop: 3, marginLeft: 13, lineHeight: 1.45 },
 
-  // ---- Grade de fotos (até 3 por linha), agora exibida logo abaixo
-  // de cada item, com as fotos exclusivas daquele item ----
-  photosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 5 },
-  photoBox: { width: 160, marginRight: 8, marginBottom: 8 },
+  // ---- Grade de fotos, em linhas explícitas de até 3, cada linha
+  // com sua própria proteção contra quebra de página ----
+  photosRow: { flexDirection: 'row', marginTop: 5, marginBottom: 4 },
+  photoBox: { width: 160, marginRight: 8 },
   photoFrame: { position: 'relative', width: 160, height: 120 },
   photo: { width: 160, height: 120, objectFit: 'cover', borderRadius: 6, borderWidth: 1, borderColor: CORES.border },
+  photoLegenda: { fontSize: 8, color: CORES.brand900, textAlign: 'center', marginTop: 4 },
   photoIndisponivel: {
     width: 160,
     height: 120,
@@ -265,6 +266,19 @@ function formatarCarimboFoto(iso) {
  * e a linha de Funcionamento nem aparece (nunca cai no fallback
  * "N/A" de labelFuncionamento, que só serve pra uso interno).
  */
+/**
+ * Agrupa um array em sub-arrays de até `tamanho` itens — usado pra
+ * transformar a lista de fotos de um item em LINHAS explícitas (ver
+ * nota em AmbienteSecao sobre por que isso é necessário no PDF).
+ */
+function agruparEmLinhas(itens, tamanho) {
+  const linhas = []
+  for (let i = 0; i < itens.length; i += tamanho) {
+    linhas.push(itens.slice(i, i + tamanho))
+  }
+  return linhas
+}
+
 function funcionamentoFoiSelecionado(valor) {
   return valor === 'sim' || valor === 'nao'
 }
@@ -632,7 +646,7 @@ function AmbienteSecao({ ambiente, numero }) {
                 </Text>
                 {funcionamentoFoiSelecionado(item.funcionamento) && (
                   <Text style={styles.itemFuncionamentoTexto}>
-                    {'   ·   '}Funcionamento: {labelFuncionamento(item.funcionamento)}
+                    · Funcionamento: {labelFuncionamento(item.funcionamento)}
                   </Text>
                 )}
               </View>
@@ -641,34 +655,55 @@ function AmbienteSecao({ ambiente, numero }) {
 
             {/* Fotos EXCLUSIVAS deste item, logo em seguida — se não
                 houver nenhuma, só a descrição acima e segue pro
-                próximo item (sem grade vazia, sem espaço reservado). */}
+                próximo item (sem grade vazia, sem espaço reservado).
+                Agrupadas em LINHAS explícitas de 3 (em vez de deixar
+                o flexWrap decidir sozinho onde cada foto cai) — cada
+                linha é seu próprio wrap={false}. Isso é necessário
+                porque wrap={false} só na foto individual, dentro de
+                uma grade com flexWrap, não é suficiente pro
+                react-pdf: ele ainda cortava fotos ao meio bem na
+                margem inferior da página, porque a decisão de quebra
+                não enxergava a "linha" como unidade — só via fotos
+                soltas. */}
             {fotosDoItem.length > 0 && (
-              <View style={styles.photosGrid}>
-                {fotosDoItem.map((foto) => {
-                  const carimbo = formatarCarimboFoto(foto.created_at)
-                  return (
-                    <View key={foto.id} style={styles.photoBox} wrap={false}>
-                      <View style={styles.photoFrame}>
-                        {foto._pdfSrc ? (
-                          <Link src={foto.url}>
-                            <Image src={foto._pdfSrc} style={styles.photo} />
-                          </Link>
-                        ) : (
-                          <Link src={foto.url}>
-                            <View style={styles.photoIndisponivel}>
-                              <Text style={styles.photoIndisponivelTexto}>Foto indisponível — abrir original</Text>
-                            </View>
-                          </Link>
-                        )}
-                        {carimbo && (
-                          <View style={styles.carimboDataHora}>
-                            <Text style={styles.carimboDataHoraTexto}>{carimbo}</Text>
+              <View>
+                {agruparEmLinhas(fotosDoItem, 3).map((linha, linhaIndex) => (
+                  <View key={linhaIndex} style={styles.photosRow} wrap={false}>
+                    {linha.map((foto) => {
+                      const carimbo = formatarCarimboFoto(foto.created_at)
+                      return (
+                        <View key={foto.id} style={styles.photoBox}>
+                          <View style={styles.photoFrame}>
+                            {foto._pdfSrc ? (
+                              <Link src={foto.url}>
+                                <Image src={foto._pdfSrc} style={styles.photo} />
+                              </Link>
+                            ) : (
+                              <Link src={foto.url}>
+                                <View style={styles.photoIndisponivel}>
+                                  <Text style={styles.photoIndisponivelTexto}>
+                                    Foto indisponível — abrir original
+                                  </Text>
+                                </View>
+                              </Link>
+                            )}
+                            {carimbo && (
+                              <View style={styles.carimboDataHora}>
+                                <Text style={styles.carimboDataHoraTexto}>{carimbo}</Text>
+                              </View>
+                            )}
                           </View>
-                        )}
-                      </View>
-                    </View>
-                  )
-                })}
+                          {/* Legenda centralizada com o nome do item —
+                              repetida em cada foto de propósito: ajuda
+                              a identificar de qual item é a foto mesmo
+                              se ela acabar isolada (impressa solta,
+                              recortada, etc.). */}
+                          <Text style={styles.photoLegenda}>{nomeItem}</Text>
+                        </View>
+                      )
+                    })}
+                  </View>
+                ))}
               </View>
             )}
 
