@@ -546,3 +546,14 @@ alter table public.vistorias add column if not exists estado_limpeza text;
 alter table public.vistorias add column if not exists energia text;
 alter table public.vistorias add column if not exists agua text;
 alter table public.vistorias add column if not exists gas text;
+
+-- ============================================================
+-- CEP do imóvel (usado pela busca automática via ViaCEP no
+-- formulário de novo imóvel, dentro do agendamento de vistoria).
+-- `proprietario_nome`/`inquilino_nome` continuam existindo na
+-- tabela (não foram removidas, só pararam de ser coletadas no
+-- formulário de cadastro) — histórico de imóveis já cadastrados
+-- com esses dados preenchidos continua intacto.
+-- Bloco idempotente: seguro rodar de novo.
+-- ============================================================
+alter table public.imoveis add column if not exists cep text;

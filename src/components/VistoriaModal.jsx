@@ -15,6 +15,21 @@ const emptyForm = {
   observacoes: ''
 }
 
+const emptyNovoImovel = {
+  codigo_imovel: '',
+  cep: '',
+  endereco: '',
+  bairro: '',
+  cidade: ''
+}
+
+/** Aplica a máscara 00000-000 enquanto o usuário digita o CEP. */
+function formatarCep(valor) {
+  const digitos = valor.replace(/\D/g, '').slice(0, 8)
+  if (digitos.length <= 5) return digitos
+  return `${digitos.slice(0, 5)}-${digitos.slice(5)}`
+}
+
 /**
  * Modal de agendamento E edição de vistoria. Passe `vistoria` (a linha
  * atual, vinda de useVistorias) para abrir em modo edição — os campos
@@ -30,15 +45,10 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [showNovoImovel, setShowNovoImovel] = useState(false)
-  const [novoImovel, setNovoImovel] = useState({
-    codigo_imovel: '',
-    endereco: '',
-    bairro: '',
-    cidade: '',
-    inquilino_nome: '',
-    proprietario_nome: ''
-  })
+  const [novoImovel, setNovoImovel] = useState(emptyNovoImovel)
   const [savingImovel, setSavingImovel] = useState(false)
+  const [buscandoCep, setBuscandoCep] = useState(false)
+  const [cepErro, setCepErro] = useState('')
 
   useEffect(() => {
     if (open) {
@@ -56,11 +66,48 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
         setForm({ ...emptyForm, data: defaultDate || '' })
       }
       setErrorMsg('')
+      setCepErro('')
       setShowNovoImovel(false)
     }
   }, [open, defaultDate, vistoria])
 
   const handleChange = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+
+  /**
+   * Busca automática por CEP (ViaCEP): assim que o CEP tiver os 8
+   * dígitos completos, busca e autopreenche Endereço, Bairro e
+   * Cidade — o usuário ainda pode editar os campos depois, a busca
+   * só poupa digitação, nunca trava o formulário se falhar.
+   */
+  const handleCepChange = async (e) => {
+    const cepFormatado = formatarCep(e.target.value)
+    setNovoImovel((f) => ({ ...f, cep: cepFormatado }))
+    setCepErro('')
+
+    const digitos = cepFormatado.replace(/\D/g, '')
+    if (digitos.length !== 8) return
+
+    setBuscandoCep(true)
+    try {
+      const resposta = await fetch(`https://viacep.com.br/ws/${digitos}/json/`)
+      const dados = await resposta.json()
+      if (dados.erro) {
+        setCepErro('CEP não encontrado — preencha o endereço manualmente.')
+      } else {
+        setNovoImovel((f) => ({
+          ...f,
+          endereco: dados.logradouro || f.endereco,
+          bairro: dados.bairro || f.bairro,
+          cidade: dados.localidade || f.cidade
+        }))
+      }
+    } catch (err) {
+      console.error('[VistoriaModal] Erro ao buscar CEP via ViaCEP:', err.message, err)
+      setCepErro('Não foi possível buscar o CEP agora — preencha manualmente.')
+    } finally {
+      setBuscandoCep(false)
+    }
+  }
 
   const handleCreateImovel = async () => {
     if (!novoImovel.codigo_imovel || !novoImovel.endereco) return
@@ -72,14 +119,8 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
         setForm((f) => ({ ...f, imovel_id: created.id }))
       }
       setShowNovoImovel(false)
-      setNovoImovel({
-        codigo_imovel: '',
-        endereco: '',
-        bairro: '',
-        cidade: '',
-        inquilino_nome: '',
-        proprietario_nome: ''
-      })
+      setNovoImovel(emptyNovoImovel)
+      setCepErro('')
     } catch (err) {
       setErrorMsg(err.message || 'Erro ao cadastrar imóvel.')
     } finally {
@@ -141,26 +182,40 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
 
           {showNovoImovel && !isEdit && (
             <div className="mb-3 space-y-2 rounded-lg border border-dashed border-brand-border bg-brand-cream p-3">
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  placeholder="Código *"
-                  className="input-field"
-                  value={novoImovel.codigo_imovel}
-                  onChange={(e) => setNovoImovel((f) => ({ ...f, codigo_imovel: e.target.value }))}
-                />
-                <input
-                  placeholder="Proprietário"
-                  className="input-field"
-                  value={novoImovel.proprietario_nome}
-                  onChange={(e) => setNovoImovel((f) => ({ ...f, proprietario_nome: e.target.value }))}
-                />
-              </div>
               <input
-                placeholder="Endereço *"
+                placeholder="Identificação / Código * (ex: CI 01 - Ed. Priory, apto. 100)"
+                className="input-field"
+                value={novoImovel.codigo_imovel}
+                onChange={(e) => setNovoImovel((f) => ({ ...f, codigo_imovel: e.target.value }))}
+              />
+
+              <div>
+                <div className="relative">
+                  <input
+                    placeholder="CEP (ex: 29000-000)"
+                    className="input-field"
+                    value={novoImovel.cep}
+                    onChange={handleCepChange}
+                    maxLength={9}
+                    inputMode="numeric"
+                  />
+                  {buscandoCep && (
+                    <Loader2
+                      size={15}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400"
+                    />
+                  )}
+                </div>
+                {cepErro && <p className="mt-1 text-xs font-medium text-amber-600">{cepErro}</p>}
+              </div>
+
+              <input
+                placeholder="Endereço / Rua *"
                 className="input-field"
                 value={novoImovel.endereco}
                 onChange={(e) => setNovoImovel((f) => ({ ...f, endereco: e.target.value }))}
               />
+
               <div className="grid grid-cols-2 gap-2">
                 <input
                   placeholder="Bairro"
@@ -175,12 +230,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
                   onChange={(e) => setNovoImovel((f) => ({ ...f, cidade: e.target.value }))}
                 />
               </div>
-              <input
-                placeholder="Inquilino"
-                className="input-field"
-                value={novoImovel.inquilino_nome}
-                onChange={(e) => setNovoImovel((f) => ({ ...f, inquilino_nome: e.target.value }))}
-              />
+
               <button
                 type="button"
                 onClick={handleCreateImovel}

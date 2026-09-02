@@ -232,7 +232,15 @@ Fotos do checklist e a assinatura digital ficam em `vistorias-fotos/<vistoria_id
 - `src/components/execucao/` — `AmbienteSummaryCard` (card do Nível 1, com progresso), `ItemCard` (card do Nível 2, um por item — estado + observação + fotos), `ItemEstadoSelector`, `FotoUploader` (atalho de câmera via `capture="environment"`), `SignatureCanvas` (assinatura em `<canvas>`, mouse + toque) e `FinalizarVistoriaModal` (resumo por item + assinatura + confirmação).
 - `src/pages/VistoriaExecucao.jsx` — junta tudo na rota `/minhas-vistorias/:id`, controlando qual nível está ativo (`activeAmbienteId`); quando a vistoria já está `finalizada`/`cancelada`, o checklist abre em modo somente leitura nos dois níveis.
 
-## Gerenciamento de usuários (Administrador)
+## Cadastro de imóvel (dentro do agendamento de vistoria)
+
+O formulário de "Novo imóvel" fica embutido em `VistoriaModal.jsx` (colapsável, acionado pelo link "+ Novo imóvel" ao lado do seletor de Imóvel) — não é uma tela própria, é um atalho pra cadastrar o imóvel sem sair do fluxo de agendar a vistoria.
+
+**Campos, nesta ordem**: Identificação/Código → CEP (com busca automática) → Endereço/Rua → Bairro e Cidade lado a lado → botão "Salvar imóvel". Os campos **Proprietário** e **Inquilino** foram removidos do formulário — as colunas `proprietario_nome`/`inquilino_nome` continuam existindo em `imoveis` (não foram apagadas do banco, só pararam de ser coletadas aqui), então imóveis cadastrados antes dessa mudança mantêm esses dados intactos.
+
+**Busca automática por CEP (ViaCEP)**: `formatarCep()` aplica a máscara `00000-000` enquanto o usuário digita; assim que os 8 dígitos estiverem completos, `handleCepChange` busca `https://viacep.com.br/ws/{cep}/json/` e preenche Endereço, Bairro e Cidade automaticamente — o usuário ainda pode editar os três campos depois, a busca só poupa digitação. Se o CEP não existir (`dados.erro`) ou a requisição falhar (rede instável, ViaCEP fora do ar), aparece um aviso abaixo do campo e o formulário continua usável normalmente pra preenchimento manual — nunca trava a tela. O valor do CEP também é salvo na coluna `imoveis.cep` (nova).
+
+
 
 A aba **Usuários** cadastra, edita e redefine senha de membros da equipe direto pelo app, sem precisar abrir o painel do Supabase.
 
