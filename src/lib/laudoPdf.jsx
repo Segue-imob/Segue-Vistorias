@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   // com sua própria proteção contra quebra de página ----
   photosRow: { flexDirection: 'row', marginTop: 5, marginBottom: 4 },
   photoBox: { width: 160, marginRight: 8 },
-  photoFrame: { position: 'relative', width: 160, height: 120 },
+  photoFrame: { position: 'relative', width: 160, height: 120, overflow: 'hidden' },
   photo: { width: 160, height: 120, objectFit: 'cover', borderRadius: 6, borderWidth: 1, borderColor: CORES.border },
   photoLegenda: { fontSize: 8, color: CORES.brand900, textAlign: 'center', marginTop: 4 },
   photoIndisponivel: {
@@ -299,7 +299,25 @@ function labelFuncionamento(valor) {
  * exótico), devolve null e quem chamar decide o que fazer — nunca
  * trava a geração do laudo inteiro por causa de uma foto só.
  */
-async function converterImagemParaPngDataUrl(url) {
+/**
+ * Busca uma imagem pela URL pública, decodifica num canvas e devolve
+ * como PNG puro em data: URI — contorna a falta de suporte a WebP do
+ * @react-pdf/renderer (ver nota no topo do arquivo).
+ *
+ * Se `carimboTexto` for informado, o carimbo de data/hora é desenhado
+ * DIRETO NOS PIXELS aqui, antes de exportar — não existe mais um
+ * `<View position="absolute">` sobreposto na página do PDF pra isso.
+ * Motivo: um elemento `position: absolute` dentro de uma foto que
+ * acaba sendo realocada pro topo da página seguinte (quando não cabe
+ * no que resta da atual) podia manter as coordenadas calculadas na
+ * tentativa de layout ANTERIOR à realocação — o carimbo "vazava" e
+ * aparecia flutuando por cima de conteúdo de outra página (o bug
+ * relatado: a faixa escura do próximo ambiente com os carimbos do
+ * item anterior por cima). Gravar o carimbo nos pixels da própria
+ * imagem elimina esse elemento sobreposto de vez — o carimbo sempre
+ * viaja junto com a foto, pra qualquer página ela for parar.
+ */
+async function converterImagemParaPngDataUrl(url, carimboTexto) {
   if (!url) return null
   try {
     const resposta = await fetch(url, { mode: 'cors' })
@@ -332,11 +350,51 @@ async function converterImagemParaPngDataUrl(url) {
     ctx.drawImage(bitmap, 0, 0)
     if (typeof bitmap.close === 'function') bitmap.close()
 
+    if (carimboTexto) {
+      desenharCarimboNoCanvas(ctx, canvas.width, carimboTexto)
+    }
+
     return canvas.toDataURL('image/png')
   } catch (err) {
     console.warn('[laudoPdf] Falha ao converter imagem para o PDF, usando URL original como último recurso:', url, err.message)
     return null
   }
+}
+
+/**
+ * Desenha o carimbo de data/hora no canto superior esquerdo do
+ * canvas: fundo branco com cantos arredondados, texto escuro —
+ * mesmo estilo visual do badge que existia como overlay, só que
+ * agora faz parte física dos pixels da imagem embutida no PDF.
+ */
+function desenharCarimboNoCanvas(ctx, larguraImagem, texto) {
+  const escala = larguraImagem / 160 // estilos calibrados pra foto de 160pt no PDF
+  const fontSize = Math.max(11, Math.round(13 * escala))
+  const paddingX = Math.round(7 * escala)
+  const paddingY = Math.round(4 * escala)
+  const margem = Math.round(6 * escala)
+  const raio = Math.round(4 * escala)
+
+  ctx.font = `600 ${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, sans-serif`
+  ctx.textBaseline = 'top'
+  const larguraTexto = ctx.measureText(texto).width
+  const boxLargura = larguraTexto + paddingX * 2
+  const boxAltura = fontSize + paddingY * 2
+
+  ctx.fillStyle = '#ffffff'
+  ctx.strokeStyle = '#e5e7eb'
+  ctx.lineWidth = Math.max(1, escala)
+  ctx.beginPath()
+  if (ctx.roundRect) {
+    ctx.roundRect(margem, margem, boxLargura, boxAltura, raio)
+  } else {
+    ctx.rect(margem, margem, boxLargura, boxAltura)
+  }
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.fillStyle = '#1a1a1a'
+  ctx.fillText(texto, margem + paddingX, margem + paddingY)
 }
 
 /**
@@ -601,14 +659,23 @@ function AmbienteSecao({ ambiente, numero }) {
                 inteiro pra página seguinte se não couber, em vez de
                 cortar no meio. As fotos ficam FORA desse wrap={false},
                 de propósito: só elas podem fluir pra página seguinte
-                se não houver espaço, sem arrastar o texto junto. */}
+                se não houver espaço, sem arrastar o texto junto.
+
+                NÃO uso `minPresenceAhead` aqui de propósito — tentei
+                numa entrega anterior, como reforço extra contra
+                título órfão, mas descobri (com um laudo real gerado)
+                que empilhar essa prop em vários elementos perto de
+                uma quebra de página causava um bug pior: fotos e
+                carimbos de itens diferentes se sobrepondo uns aos
+                outros no rodapé da página. `wrap={false}` sozinho já
+                resolve o problema original sem esse efeito colateral. */}
             <View wrap={false}>
               {primeiroItem && (
-                <Text style={styles.ambienteTitulo} minPresenceAhead={40}>
+                <Text style={styles.ambienteTitulo}>
                   {numero}. {nomeAmbiente}
                 </Text>
               )}
-              <Text style={styles.itemNome} minPresenceAhead={20}>
+              <Text style={styles.itemNome}>
                 {numeroItem} {nomeItem}
               </Text>
               <View style={styles.itemCondicaoRow}>
