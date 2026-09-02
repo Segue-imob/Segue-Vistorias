@@ -66,7 +66,7 @@ Disponível nos três lugares onde uma vistoria aparece como card/linha — **Ag
 O fluxo de campo do Vistoriador é uma navegação em **2 níveis**:
 
 - **Nível 1 — Ambientes**: cards com o nome do ambiente, barra de progresso e "X/Y itens avaliados", botão **Vistoriar Ambiente**. O seletor "+ Adicionar" ambiente (Sala, Cozinha, Quarto, Banheiro, Varanda ou "Outro" customizado) já carrega, na hora, os **12 itens padrão** como linhas reais no banco — é por isso que o card nasce mostrando "0/12" mesmo antes de entrar nele.
-- **Nível 2 — Itens do ambiente**: ao tocar em "Vistoriar Ambiente", a tela troca para a lista de itens daquele ambiente (Piso, Rodapé, Parede, Teto, Porta, Janela, Interruptores e Tomadas, Luminária, Armário, Bancada da Pia, Torneira, Tanque), cada um com seletor de **Condição** (`Ótima`/`Boa`/`Regular`/`Ruim`), seletor de **Funcionamento** (`Sim`/`Não`, útil para eletros/eletrônicos), campo de observação e upload de foto **por item**, com limite de **30 fotos por item** (contador "X/30" sempre visível). O botão **+ Adicionar Outro Item** cria itens personalizados na hora. **← Voltar para Lista de Ambientes** retorna ao Nível 1.
+- **Nível 2 — Itens do ambiente**: ao tocar em "Vistoriar Ambiente", a tela troca para a lista de itens daquele ambiente (Piso, Rodapé, Parede, Teto, Porta, Janela, Interruptores e Tomadas, Luminária, Armário, Bancada da Pia, Torneira, Tanque), cada um com seletor de **Condição** (`Ótimo`/`Bom`/`Regular`/`Ruim`), seletor de **Funcionamento** (`Sim`/`Não`, útil para eletros/eletrônicos), campo de observação e upload de foto **por item**, com limite de **30 fotos por item** (contador "X/30" sempre visível). O botão **+ Adicionar Outro Item** cria itens personalizados na hora. **← Voltar para Lista de Ambientes** retorna ao Nível 1.
 
 ### Informações Gerais do Imóvel
 
@@ -116,7 +116,7 @@ Depois de finalizar, a tela **não navega mais embora automaticamente** — fica
 1. **Cabeçalho — sem tabela, blocos de fundo suave**: marca "SEGUE Vistorias" (marca-d'água quadrada + wordmark, cores `#a64324`/`#261912`), Endereço completo em destaque logo abaixo, depois Tipo de vistoria / Data-hora de início / Data-hora de finalização em 3 cards lado a lado com fundo `#f1ede5` (sem bordas pesadas de tabela), e por fim Vistoriador Responsável ao lado de **Total de Fotos** (contagem dinâmica — soma todas as fotos que efetivamente aparecem no corpo do laudo, ou seja, só as dos itens avaliados que sobrevivem ao filtro "Não avaliado"). O campo Solicitante foi removido do quadro — como não era usado em mais nenhum outro lugar do app, também tirei o join `solicitante:criado_por` da busca da vistoria em `useVistoriaExecucao`, evitando uma consulta desnecessária.
 2. **Caixa "Informações do Imóvel" — tags/badges, não tabela**: os 4 campos (Estado de Limpeza, Energia, Água, Gás) viraram badges arredondados com fundo `#f1ede5`, lado a lado numa linha só (quebra pra próxima linha se não couber), cada um com rótulo pequeno em cima e valor legível embaixo — sem grade de células com bordas.
 3. **Introdução + legenda de condição** — parágrafo introdutório e a legenda "Parâmetros de Avaliação / Condição dos Itens" (ÓTIMO/BOM/REGULAR/RUIM, com as cores oficiais).
-4. **Resumo executivo** — cards com total de ambientes, "X/Y itens avaliados", e a contagem de itens em cada condição (Ótima/Boa/Regular/Ruim), coloridos com a mesma paleta usada no checklist.
+4. **Resumo executivo** — cards com total de ambientes, "X/Y itens avaliados", e a contagem de itens em cada condição (Ótimo/Bom/Regular/Ruim), coloridos com a mesma paleta usada no checklist.
 5. **Detalhamento por ambiente — filtrado, numerado e agrupado por item, fotos inline**: só ambientes com pelo menos um item avaliado aparecem no laudo (numerados sequencialmente, sem buraco: "1. Sala", "2. Cozinha"...); dentro deles, só os itens com condição efetivamente preenchida — **itens "Não avaliado" nunca aparecem no corpo do laudo**, e cada um ganha numeração hierárquica ("1.1 Piso", "1.2 Parede", "2.1 Bancada da Pia"...). Para cada item, nessa ordem exata — título numerado em negrito; linha de status (bolinha colorida indicando a condição + "Condição: {label}" + "· Funcionamento: {Sim/Não/N/A}" quando informado); observação como parágrafo indentado; e, logo em seguida, a **grade com as fotos exclusivas daquele item** (até 3 por linha — a própria largura da página só comporta 3 caixas de 158pt antes de quebrar linha). Não existe galeria global ao final do ambiente: cada item carrega suas fotos coladas nele, e um item sem fotos simplesmente não reserva espaço nenhum pra grade — segue direto pro próximo item. Cada foto é clicável (`<Link src={foto.url}>`, a URL pública original, não a versão embutida) e abre a imagem em alta resolução numa nova aba do navegador. A marca d'água de data/hora já está queimada nos pixels desde o upload, então nenhum redesenho é necessário aqui.
 
    **O Resumo Executivo (item 4 acima) continua contando TODOS os itens, avaliados ou não** — filtrar ali também esconderia justamente o que esse card existe pra revelar (progresso/pendências). O filtro do item "Não avaliado" se aplica só ao corpo detalhado do laudo, onde só faz sentido mostrar o que foi de fato vistoriado.
@@ -124,7 +124,7 @@ Depois de finalizar, a tela **não navega mais embora automaticamente** — fica
 
 ### Seção "Introdução" no laudo
 
-Logo após a caixa "Informações do Imóvel" e antes do Resumo Executivo, o laudo agora tem uma seção **Introdução** (`Introducao()` em `laudoPdf.jsx`): um parágrafo explicando o propósito do relatório, seguido de "Parâmetros de Avaliação / Condição dos Itens" — uma legenda com bolinha colorida + descrição de cada condição (ÓTIMO/BOM/REGULAR/RUIM), usando as mesmas cores oficiais de `ESTADOS_ITEM`. Os títulos da legenda usam a forma masculina (referindo-se a "o item", como no texto que você passou) só nesse bloco — o resto do laudo e do app continuam com "Ótima/Boa/Regular/Ruim" (forma feminina, referindo-se a "a condição"), sem mudança nos rótulos usados em todo o resto do sistema.
+Logo após a caixa "Informações do Imóvel" e antes do Resumo Executivo, o laudo agora tem uma seção **Introdução** (`Introducao()` em `laudoPdf.jsx`): um parágrafo explicando o propósito do relatório, seguido de "Parâmetros de Avaliação / Condição dos Itens" — uma legenda com bolinha colorida + descrição de cada condição (ÓTIMO/BOM/REGULAR/RUIM), usando as mesmas cores oficiais de `ESTADOS_ITEM`. A nomenclatura (masculina — Ótimo/Bom/Regular/Ruim) é a mesma usada em todo o resto do laudo e do app, padronizada a partir de `ESTADOS_ITEM.label`.
 
 ### Exibição condicional do Funcionamento — checagem estrita
 
@@ -136,12 +136,12 @@ Atualizada em `ESTADOS_ITEM` (`src/lib/vistoriaExecucao.js`) — fonte única us
 
 | Condição | Cor      |
 |----------|----------|
-| Ótima    | `#2563EB` (azul) |
-| Boa      | `#16A34A` (verde) |
+| Ótimo    | `#2563EB` (azul) |
+| Bom      | `#16A34A` (verde) |
 | Regular  | `#CA8A04` (amarelo) |
 | Ruim     | `#DC2626` (vermelho) |
 
-Antes, "Ótima" e "Boa" usavam dois tons de verde bem parecidos (`#16A34A` e `#65A30D`) — difícil de distinguir à primeira vista. A troca pra azul/verde deixa as quatro condições visualmente inconfundíveis.
+Antes, "Ótimo" e "Bom" usavam dois tons de verde bem parecidos (`#16A34A` e `#65A30D`) — difícil de distinguir à primeira vista. A troca pra azul/verde deixa as quatro condições visualmente inconfundíveis.
 
 ### Por que as fotos apareciam em branco no PDF
 
@@ -194,9 +194,9 @@ A miniatura aparece na tela **imediatamente** assim que o upload ao Storage term
 
 `useVistoriaExecucao.js` grava o nome do ambiente/item e o estado em **duas colunas cada** — `ambiente`+`nome` (em `vistoria_ambientes`), `item`+`nome` e `estado`+`status` (em `vistoria_itens`) — para funcionar mesmo que seu banco use um nome de coluna diferente do outro. Isso é redundância deliberada (as duas colunas do par sempre recebem o mesmo valor); `schema.sql` já cria as colunas extras. Se algum `insert`/`update` falhar mesmo assim (sem internet em campo, coluna realmente ausente, etc.), a mensagem exata do Supabase vai pro `console.error` e o ambiente/item aparece na tela com um selo **"não sincronizado"** — a interface não trava, mas esses itens só existem localmente até a próxima gravação bem-sucedida (não sobrevivem a um recarregamento de página).
 
-**Importante — o que eu não implementei de propósito**: itens novos (padrão ou personalizados) sempre nascem com estado `null` ("não avaliado"), nunca pré-preenchidos como "Ótima"/"Boa". Preencher automaticamente um item como avaliado antes do vistoriador sequer olhar pra ele forjaria dado num documento que pode virar base de laudo ou disputa de caução — isso é uma escolha de integridade dos dados, não uma lacuna técnica.
+**Importante — o que eu não implementei de propósito**: itens novos (padrão ou personalizados) sempre nascem com estado `null` ("não avaliado"), nunca pré-preenchidos como "Ótimo"/"Bom". Preencher automaticamente um item como avaliado antes do vistoriador sequer olhar pra ele forjaria dado num documento que pode virar base de laudo ou disputa de caução — isso é uma escolha de integridade dos dados, não uma lacuna técnica.
 
-**Mudança de escala (2ª vez)**: a condição do item mudou de `Bom/Regular/Avariado/Ausente` para `Ótima/Boa/Regular/Ruim`. Vale notar que o conceito de **"Ausente"** (item que simplesmente não existe no imóvel) não tem equivalente direto na nova escala — se isso for relevante pro seu fluxo (ex.: um armário que deveria existir mas não existe), o campo Observações continua disponível para registrar isso em texto. Como a escala já mudou duas vezes, `schema.sql` agora **remove** a constraint `CHECK` de `estado` em vez de trocá-la de novo — a validação de valores válidos passa a viver só no front (`ESTADOS_ITEM`), evitando outro ciclo de erro de constraint a cada ajuste futuro de rótulo.
+**Mudança de escala (2ª vez)**: a condição do item mudou de `Bom/Regular/Avariado/Ausente` para `Ótimo/Bom/Regular/Ruim` (nomenclatura padronizada no masculino). Vale notar que o conceito de **"Ausente"** (item que simplesmente não existe no imóvel) não tem equivalente direto na nova escala — se isso for relevante pro seu fluxo (ex.: um armário que deveria existir mas não existe), o campo Observações continua disponível para registrar isso em texto. Como a escala já mudou duas vezes, `schema.sql` agora **remove** a constraint `CHECK` de `estado` em vez de trocá-la de novo — a validação de valores válidos passa a viver só no front (`ESTADOS_ITEM`), evitando outro ciclo de erro de constraint a cada ajuste futuro de rótulo.
 
 Tabelas envolvidas — rode novamente `supabase/schema.sql` (é idempotente) para aplicar:
 

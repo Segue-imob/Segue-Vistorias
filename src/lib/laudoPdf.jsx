@@ -445,10 +445,12 @@ function InformacoesImovel({ vistoria }) {
   )
 }
 
-// Legenda de condição usada só na Introdução — os títulos aqui usam a
-// forma masculina (ÓTIMO/BOM/REGULAR/RUIM, referindo-se a "o item"),
-// como pedido explicitamente para este bloco; o resto do laudo e do
-// app continua usando ESTADOS_ITEM.label ("Ótima/Boa/Regular/Ruim").
+// Legenda de condição usada na Introdução — mesma nomenclatura
+// masculina (ÓTIMO/BOM/REGULAR/RUIM) já usada em ESTADOS_ITEM.label
+// em todo o resto do sistema (checklist, badges, resumo executivo,
+// texto do item no laudo). Mantida como lista própria (não reaproveita
+// meta.label diretamente) só porque a legenda também carrega a
+// descrição de cada condição, que não existe em ESTADOS_ITEM.
 const LEGENDA_CONDICAO = [
   { chave: 'otima', titulo: 'ÓTIMO', descricao: 'Item sem marcas de uso ou recém-instalado/novo.' },
   { chave: 'boa', titulo: 'BOM', descricao: 'Apresenta pouco desgaste decorrente de uso normal.' },

@@ -32,7 +32,8 @@ export const FOTOS_BUCKET = 'vistorias-fotos'
 export const MAX_FOTOS_POR_ITEM = 30
 
 // Condição de cada item vistoriado, na ordem exata pedida:
-// Ótima -> Boa -> Regular -> Ruim. Paleta oficial de condição (usada
+// Ótimo -> Bom -> Regular -> Ruim (nomenclatura padronizada no
+// masculino em todo o sistema). Paleta oficial de condição (usada
 // tanto no seletor do checklist quanto nas bolinhas/badges do laudo
 // em PDF) — propositalmente diferente da paleta de STATUS da
 // vistoria (src/lib/constants.js) para não confundir "condição do
@@ -40,14 +41,14 @@ export const MAX_FOTOS_POR_ITEM = 30
 export const ESTADOS_ITEM = {
   otima: {
     value: 'otima',
-    label: 'Ótima',
+    label: 'Ótimo',
     color: '#2563EB',
     bg: 'bg-[#2563EB]/10',
     text: 'text-[#2563EB]'
   },
   boa: {
     value: 'boa',
-    label: 'Boa',
+    label: 'Bom',
     color: '#16A34A',
     bg: 'bg-[#16A34A]/10',
     text: 'text-[#16A34A]'
