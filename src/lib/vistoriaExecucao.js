@@ -406,3 +406,29 @@ export function montarNomeArquivoLaudo(vistoria) {
   const nome = `Vistoria ${tipo} - CI ${codigo} - ${nomeImovel}`
   return `${sanitizarNomeArquivo(removerAcentos(nome))}.pdf`
 }
+
+/**
+ * Monta o endereço completo do imóvel no formato usado no cabeçalho
+ * do laudo: "Rua/Avenida, nº Número - Bairro, Cidade - CEP 00000-000"
+ * (ex.: "Avenida Hugo Musso, nº 160 - Praia da Costa, Vila Velha -
+ * CEP 29101-280"). `numero` vazio ou nulo vira "S/N" — nunca quebra a
+ * formatação por falta desse campo. Qualquer outro campo ausente
+ * (bairro, cidade, CEP) simplesmente não entra na string, sem deixar
+ * hífen ou vírgula solta.
+ */
+export function montarEnderecoCompleto(imovel) {
+  if (!imovel) return ''
+  const partes = []
+
+  if (imovel.endereco) {
+    const numero = imovel.numero ? imovel.numero : 'S/N'
+    partes.push(`${imovel.endereco}, nº ${numero}`)
+  }
+
+  const bairroCidade = [imovel.bairro, imovel.cidade].filter(Boolean).join(', ')
+  if (bairroCidade) partes.push(bairroCidade)
+
+  if (imovel.cep) partes.push(`CEP ${imovel.cep}`)
+
+  return partes.join(' - ')
+}

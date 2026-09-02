@@ -103,6 +103,42 @@ export async function salvarLaudoPdfAvulso(vistoriaId, blob) {
 }
 
 /**
+ * Normaliza uma entrada de `vistoria_itens.fotos_urls` — pode ser a
+ * URL solta em texto (formato antigo, sem `created_at`) ou um objeto
+ * `{ url, created_at }` (formato atual, gravado por
+ * `useVistoriaExecucao.addFotoItem`). Sempre devolve o formato objeto.
+ */
+function normalizarEntradaFotoUrl(entrada) {
+  if (typeof entrada === 'string') return { url: entrada, created_at: null }
+  return { url: entrada?.url || null, created_at: entrada?.created_at || null }
+}
+
+/**
+ * Combina as fotos vindas de `vistoria_fotos` (join já feito na
+ * consulta) com quaisquer URLs presentes só em `item.fotos_urls` sem
+ * uma linha correspondente em `vistoria_fotos` — cobre o caso de uma
+ * foto ter sido salva como rede de segurança (o `insert` na tabela
+ * falhou, mas a URL sobrevive no array). Função única, compartilhada
+ * entre o gerador de PDF, o laudo em HTML e a lista achatada do
+ * lightbox — antes cada um tinha sua própria cópia dessa lógica (ou,
+ * no caso do HTML, nem tinha: fotos só-em-fotos_urls simplesmente não
+ * apareciam ali).
+ */
+export function coletarFotosDoItem(item) {
+  const doJoin = Array.isArray(item.vistoria_fotos) ? item.vistoria_fotos : []
+  const urlsJaPresentes = new Set(doJoin.map((f) => f.url))
+  const extrasDeFotosUrls = (Array.isArray(item.fotos_urls) ? item.fotos_urls : [])
+    .map(normalizarEntradaFotoUrl)
+    .filter((entrada) => entrada.url && !urlsJaPresentes.has(entrada.url))
+    .map((entrada, index) => ({
+      id: `fotos_urls-${item.id}-${index}`,
+      url: entrada.url,
+      created_at: entrada.created_at
+    }))
+  return [...doJoin, ...extrasDeFotosUrls]
+}
+
+/**
  * Mesmo filtro estrito usado no PDF (ver laudoPdf.jsx): só ambientes
  * com pelo menos um item efetivamente avaliado aparecem no laudo, e
  * dentro deles só os itens com condição preenchida. Compartilhada
@@ -119,7 +155,8 @@ export function filtrarAmbientesParaLaudo(ambientes) {
  * Lista achatada, em ordem, de todas as fotos de um conjunto de
  * ambientes já filtrado (ver `filtrarAmbientesParaLaudo`) — cada foto
  * carrega o nome do ambiente/item de origem, usado tanto na exibição
- * quanto no cabeçalho do lightbox.
+ * quanto no cabeçalho do lightbox. Já usa `coletarFotosDoItem`, então
+ * inclui as fotos que só existem em `fotos_urls`.
  */
 export function construirTodasFotosDoLaudo(ambientesFiltrados) {
   const lista = []
@@ -127,7 +164,7 @@ export function construirTodasFotosDoLaudo(ambientesFiltrados) {
     const nomeAmbiente = amb.ambiente || amb.nome
     ;(amb.vistoria_itens || []).forEach((item) => {
       const nomeItem = item.item || item.nome
-      ;(item.vistoria_fotos || []).forEach((foto) => {
+      coletarFotosDoItem(item).forEach((foto) => {
         lista.push({ ...foto, ambienteNome: nomeAmbiente, itemNome: nomeItem })
       })
     })

@@ -50,8 +50,10 @@ import {
   ESTADOS_ITEM_ORDER,
   GAS_OPCOES,
   getEstadoItemMeta,
-  getLabelOpcao
+  getLabelOpcao,
+  montarEnderecoCompleto
 } from './vistoriaExecucao'
+import { coletarFotosDoItem } from './laudoData'
 
 const CORES = {
   accent: '#a64324',
@@ -338,23 +340,6 @@ async function converterImagemParaPngDataUrl(url) {
 }
 
 /**
- * Combina as fotos vindas de `vistoria_fotos` (join já feito no hook)
- * com quaisquer URLs presentes só em `item.fotos_urls` — cobre o caso
- * de uma foto ter sido salva como rede de segurança em fotos_urls
- * (ver useVistoriaExecucao.addFotoItem) sem uma linha correspondente
- * em vistoria_fotos, o que faria essa foto nunca aparecer no laudo se
- * só olhássemos pra vistoria_fotos.
- */
-function coletarFotosDoItem(item) {
-  const doJoin = Array.isArray(item.vistoria_fotos) ? item.vistoria_fotos : []
-  const urlsJaPresentes = new Set(doJoin.map((f) => f.url))
-  const extrasDeFotosUrls = (Array.isArray(item.fotos_urls) ? item.fotos_urls : [])
-    .filter((url) => url && !urlsJaPresentes.has(url))
-    .map((url, index) => ({ id: `fotos_urls-${item.id}-${index}`, url, created_at: null }))
-  return [...doJoin, ...extrasDeFotosUrls]
-}
-
-/**
  * Prepara uma cópia de `vistoria`/`ambientes` pronta pro PDF: cada
  * foto ganha `_pdfSrc` (PNG embutido, o que de fato é desenhado na
  * página) mantendo `url` intacta (usada no link clicável pra foto
@@ -407,7 +392,7 @@ function IconeLupaPdf({ tamanho = 16 }) {
 
 function Cabecalho({ vistoria, totalFotos }) {
   const imovel = vistoria.imoveis || {}
-  const endereco = [imovel.endereco, imovel.bairro, imovel.cidade].filter(Boolean).join(', ')
+  const endereco = montarEnderecoCompleto(imovel)
 
   return (
     <>

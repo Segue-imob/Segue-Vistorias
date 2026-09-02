@@ -461,11 +461,16 @@ export function useVistoriaExecucao(vistoriaId) {
       // mesmo quando o insert acima falhou: é a rede de segurança do
       // item 3, garantindo que a URL sobrevive em algum lugar do banco
       // mesmo se o registro em vistoria_fotos não tiver ido adiante.
+      // Cada entrada vai como { url, created_at } (não mais a URL
+      // solta) — assim, mesmo quando essa foto só existe aqui (nunca
+      // virou uma linha de verdade em vistoria_fotos), o carimbo de
+      // data/hora do laudo ainda tem uma data real pra mostrar, em
+      // vez de ficar sem nenhuma.
       const itemAtual = ambientes
         .find((a) => a.id === ambienteId)
         ?.vistoria_itens?.find((it) => it.id === itemId)
       const urlsAtuais = Array.isArray(itemAtual?.fotos_urls) ? itemAtual.fotos_urls : []
-      const novasUrls = [...urlsAtuais, url]
+      const novasUrls = [...urlsAtuais, { url, created_at: new Date().toISOString() }]
 
       const { error: arrErr } = await supabase.from('vistoria_itens').update({ fotos_urls: novasUrls }).eq('id', itemId)
       if (arrErr) {
@@ -515,7 +520,10 @@ export function useVistoriaExecucao(vistoriaId) {
 
         if (fotoAtual?.url) {
           const urlsAtuais = Array.isArray(itemAtual?.fotos_urls) ? itemAtual.fotos_urls : []
-          const novasUrls = urlsAtuais.filter((u) => u !== fotoAtual.url)
+          // Cada entrada pode ser a URL solta (formato antigo) ou
+          // { url, created_at } (formato novo) — compara pela URL em
+          // qualquer um dos dois casos.
+          const novasUrls = urlsAtuais.filter((entrada) => (typeof entrada === 'string' ? entrada : entrada?.url) !== fotoAtual.url)
           const { error: arrErr } = await supabase
             .from('vistoria_itens')
             .update({ fotos_urls: novasUrls })
@@ -540,7 +548,9 @@ export function useVistoriaExecucao(vistoriaId) {
                         ...it,
                         vistoria_fotos: (it.vistoria_fotos || []).filter((f) => f.id !== fotoId),
                         fotos_urls: Array.isArray(it.fotos_urls)
-                          ? it.fotos_urls.filter((u) => u !== fotoAtual?.url)
+                          ? it.fotos_urls.filter(
+                              (entrada) => (typeof entrada === 'string' ? entrada : entrada?.url) !== fotoAtual?.url
+                            )
                           : it.fotos_urls
                       }
                     : it

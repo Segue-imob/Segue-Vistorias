@@ -163,7 +163,17 @@ Atualizada em `ESTADOS_ITEM` (`src/lib/vistoriaExecucao.js`) — fonte única us
 
 Antes, "Ótimo" e "Bom" usavam dois tons de verde bem parecidos (`#16A34A` e `#65A30D`) — difícil de distinguir à primeira vista. A troca pra azul/verde deixa as quatro condições visualmente inconfundíveis.
 
-### Legenda com nome do item abaixo de cada foto + correção de fotos cortadas na margem
+### Carimbo de data/hora — corrigindo a causa raiz do "sempre faltando" e endereço completo com número/CEP
+
+**Por que o carimbo continuava faltando em algumas fotos, de vez em quando**: já tinha diagnosticado isso duas vezes como "fotos que só existem em `fotos_urls`, sem `created_at`" — mas até agora só explicava o sintoma, sem corrigir a causa. Encontrei o ponto exato: `vistoria_itens.fotos_urls` guardava só a **URL solta**, sem nenhum jeito de carregar quando aquela foto foi tirada. Toda vez que o `insert` em `vistoria_fotos` falhava (rede instável, etc.) e a foto caía nessa rede de segurança, a informação de data/hora se perdia — não porque o app não tentasse, mas porque o array só tinha espaço pra string da URL.
+
+**A correção**: `fotos_urls` agora guarda `{ url, created_at }` (objeto) em vez da URL solta — `addFotoItem`/`removeFotoItem`, no hook, já gravam/leem nesse formato novo, com suporte a ler o formato antigo (string solta) pra não quebrar dados já existentes. Daqui pra frente, qualquer foto que caia na rede de segurança carrega consigo a data/hora real da captura, e o carimbo aparece normalmente. Fotos **já gravadas antes dessa correção** (formato antigo, string solta) continuam sem `created_at` — não tem como recuperar retroativamente uma informação que nunca foi salva.
+
+**Consolidação que saiu dessa investigação**: existiam **três cópias** da lógica "combine `vistoria_fotos` com as URLs extras de `fotos_urls`" — uma no PDF, e a versão HTML **nem tinha essa lógica**, então fotos que só existiam via `fotos_urls` simplesmente não apareciam no laudo em HTML (embora aparecessem no PDF). Consolidei numa função só, `coletarFotosDoItem()` em `src/lib/laudoData.js`, usada agora pelos três lugares (PDF, HTML, e a lista achatada do lightbox) — bug de contagem/exibição fechado de vez, não só o do carimbo.
+
+**Endereço completo no cabeçalho do laudo**: `montarEnderecoCompleto()` (nova, em `vistoriaExecucao.js`) monta `"{endereço}, nº {número} - {bairro}, {cidade} - CEP {cep}"`, com `numero` vazio virando `"S/N"` — usada tanto no PDF quanto no HTML, no lugar do `[endereco, bairro, cidade].join(', ')` antigo, que nunca incluía nem número nem CEP.
+
+
 
 **Bug real encontrado e corrigido — fotos cortadas ao meio na margem inferior da página**: analisei um laudo gerado (anexado na entrega) e confirmei — uma linha de fotos aparecia sliced bem no rodapé de uma página, cada foto mostrando só a metade de cima. A causa: `wrap={false}` na foto individual, dentro de uma grade com `flexWrap: 'wrap'`, não é suficiente pro `@react-pdf/renderer` — a decisão de "isso cabe na página atual?" não enxergava a linha inteira como uma unidade, só fotos soltas, e às vezes deixava uma foto começar mas não terminar antes da quebra. A correção: as fotos de cada item agora são agrupadas em **linhas explícitas de até 3** (`agruparEmLinhas()`), e cada linha — não cada foto — é o bloco `wrap={false}`. Esse é o padrão mais confiável do `react-pdf` pra grades que precisam de "manter linha inteira junta" na paginação; deixar o `flexWrap` decidir sozinho onde cada item cai, mesmo com `wrap={false}` no item, se mostrou insuficiente.
 

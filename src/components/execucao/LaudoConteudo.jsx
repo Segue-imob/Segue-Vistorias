@@ -8,8 +8,10 @@ import {
   FUNCIONAMENTO_OPCOES,
   GAS_OPCOES,
   getEstadoItemMeta,
-  getLabelOpcao
+  getLabelOpcao,
+  montarEnderecoCompleto
 } from '../../lib/vistoriaExecucao'
+import { coletarFotosDoItem } from '../../lib/laudoData'
 
 function formatarDataHora(iso) {
   if (!iso) return '—'
@@ -51,7 +53,7 @@ function labelFuncionamento(valor) {
  */
 export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFotos, onOpenFoto }) {
   const imovel = vistoria.imoveis || {}
-  const endereco = [imovel.endereco, imovel.bairro, imovel.cidade].filter(Boolean).join(', ')
+  const endereco = montarEnderecoCompleto(imovel)
 
   // @page é uma regra global — não importa onde o <style> fica no
   // DOM, ela vale pra impressão da página inteira (Ctrl+P do
@@ -176,6 +178,12 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
               const nomeItem = item.item || item.nome
               const funcLabel = labelFuncionamento(item.funcionamento)
               const primeiroItem = itemIndex === 0
+              // Combina vistoria_fotos com quaisquer URLs presentes
+              // só em fotos_urls (rede de segurança) — sem isso,
+              // fotos que só existem por esse caminho nunca
+              // apareciam na versão HTML do laudo (apareciam no PDF,
+              // porque lá essa combinação já existia).
+              const fotosDoItem = coletarFotosDoItem(item)
               return (
                 <div key={item.id} className="border-b border-[#e5e7eb] pb-4 last:border-0 last:pb-0">
                   {/* Bloco de texto (título do ambiente só no primeiro
@@ -210,9 +218,9 @@ export default function LaudoConteudo({ vistoria, ambientesParaExibir, totalFoto
                     </div>
                     {item.observacao && <p className="mt-1.5 pl-5 text-base text-slate-500">{item.observacao}</p>}
                   </div>
-                  {(item.vistoria_fotos || []).length > 0 && (
+                  {fotosDoItem.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-3 pl-4">
-                      {(item.vistoria_fotos || []).map((foto) => (
+                      {fotosDoItem.map((foto) => (
                         <div key={foto.id} className="w-32 shrink-0 break-inside-avoid">
                           <button
                             type="button"
