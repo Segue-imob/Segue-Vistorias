@@ -136,19 +136,27 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.imovel_id || !form.tipo || !form.data || !form.hora || !form.vistoriador_id) {
-      setErrorMsg('Preencha todos os campos obrigatórios.')
+    // Só 4 campos são realmente obrigatórios pra agendar: Imóvel
+    // (que já carrega endereço + código junto, é o mesmo seletor),
+    // Vistoriador responsável e Data. Tudo mais — Tipo de vistoria,
+    // Hora, Observações — é opcional.
+    if (!form.imovel_id || !form.vistoriador_id || !form.data) {
+      setErrorMsg('Selecione o imóvel, o vistoriador responsável e a data da vistoria.')
       return
     }
     setSubmitting(true)
     setErrorMsg('')
     try {
+      // Hora é opcional agora — sem ela, `new Date("...T")` seria uma
+      // data inválida (a assinatura ISO exige um horário). 00:00
+      // como padrão evita isso sem impedir o agendamento.
+      const horaFinal = form.hora || '00:00'
       const payload = {
         imovel_id: form.imovel_id,
         tipo: form.tipo,
         vistoriador_id: form.vistoriador_id,
         observacoes: form.observacoes || null,
-        data_agendamento: new Date(`${form.data}T${form.hora}`).toISOString()
+        data_agendamento: new Date(`${form.data}T${horaFinal}`).toISOString()
       }
       // Só define status "agendada" ao criar — editar não deve mexer
       // no status atual da vistoria (isso é feito no Kanban/menu).
@@ -300,7 +308,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
         </div>
 
         <div>
-          <label className="label-field">Tipo de vistoria *</label>
+          <label className="label-field">Tipo de vistoria</label>
           <div className="grid grid-cols-3 gap-2">
             {TIPOS_VISTORIA.map((tipo) => (
               <button
@@ -325,7 +333,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
             <input type="date" className="input-field" value={form.data} onChange={handleChange('data')} />
           </div>
           <div>
-            <label className="label-field">Hora *</label>
+            <label className="label-field">Hora</label>
             <input type="time" className="input-field" value={form.hora} onChange={handleChange('hora')} />
           </div>
         </div>
