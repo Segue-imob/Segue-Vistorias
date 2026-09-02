@@ -177,6 +177,7 @@ const styles = StyleSheet.create({
   // de cada item, com as fotos exclusivas daquele item ----
   photosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 5 },
   photoBox: { width: 158, marginRight: 8, marginBottom: 8 },
+  photoFrame: { position: 'relative', width: 158, height: 118 },
   photo: { width: 158, height: 118, objectFit: 'cover', borderRadius: 2, borderWidth: 1, borderColor: CORES.border },
   photoIndisponivel: {
     width: 158,
@@ -189,6 +190,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   photoIndisponivelTexto: { fontSize: 6, color: CORES.brand700, textAlign: 'center', paddingHorizontal: 6 },
+  // Carimbo de data/hora sobreposto no canto superior esquerdo de
+  // cada miniatura — fundo branco translúcido, texto escuro, sempre
+  // por cima da imagem (zIndex).
+  carimboDataHora: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    borderRadius: 3,
+    paddingVertical: 2,
+    paddingHorizontal: 5
+  },
+  carimboDataHoraTexto: { fontSize: 6, fontFamily: 'Helvetica-Bold', color: '#1a1a1a' },
 
   // ---- Encerramento ----
   observacoesFinaisBox: {
@@ -224,6 +239,16 @@ function formatarData(iso) {
     return format(new Date(iso), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
   } catch {
     return '—'
+  }
+}
+
+/** Carimbo da miniatura da foto — com segundos, formato exato pedido. */
+function formatarCarimboFoto(iso) {
+  if (!iso) return null
+  try {
+    return format(new Date(iso), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })
+  } catch {
+    return null
   }
 }
 
@@ -588,21 +613,31 @@ function AmbienteSecao({ ambiente, numero }) {
                 próximo item (sem grade vazia, sem espaço reservado). */}
             {fotosDoItem.length > 0 && (
               <View style={styles.photosGrid}>
-                {fotosDoItem.map((foto) => (
-                  <View key={foto.id} style={styles.photoBox} wrap={false}>
-                    {foto._pdfSrc ? (
-                      <Link src={foto.url}>
-                        <Image src={foto._pdfSrc} style={styles.photo} />
-                      </Link>
-                    ) : (
-                      <Link src={foto.url}>
-                        <View style={styles.photoIndisponivel}>
-                          <Text style={styles.photoIndisponivelTexto}>Foto indisponível — abrir original</Text>
-                        </View>
-                      </Link>
-                    )}
-                  </View>
-                ))}
+                {fotosDoItem.map((foto) => {
+                  const carimbo = formatarCarimboFoto(foto.created_at)
+                  return (
+                    <View key={foto.id} style={styles.photoBox} wrap={false}>
+                      <View style={styles.photoFrame}>
+                        {foto._pdfSrc ? (
+                          <Link src={foto.url}>
+                            <Image src={foto._pdfSrc} style={styles.photo} />
+                          </Link>
+                        ) : (
+                          <Link src={foto.url}>
+                            <View style={styles.photoIndisponivel}>
+                              <Text style={styles.photoIndisponivelTexto}>Foto indisponível — abrir original</Text>
+                            </View>
+                          </Link>
+                        )}
+                        {carimbo && (
+                          <View style={styles.carimboDataHora}>
+                            <Text style={styles.carimboDataHoraTexto}>{carimbo}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  )
+                })}
               </View>
             )}
           </View>

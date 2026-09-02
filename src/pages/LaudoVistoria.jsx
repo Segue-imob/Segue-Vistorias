@@ -26,6 +26,16 @@ function formatarDataHora(iso) {
   }
 }
 
+/** Carimbo sobreposto na miniatura — com segundos, formato exato pedido. */
+function formatarCarimboFoto(iso) {
+  if (!iso) return null
+  try {
+    return format(new Date(iso), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })
+  } catch {
+    return null
+  }
+}
+
 function labelFuncionamento(valor) {
   return FUNCIONAMENTO_OPCOES.find((f) => f.value === valor)?.label
 }
@@ -323,9 +333,14 @@ export default function LaudoVistoria() {
                               key={foto.id}
                               type="button"
                               onClick={() => setFotoAmpliada({ ...foto, ambienteNome: ambiente.ambiente || ambiente.nome, itemNome: nomeItem })}
-                              className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-brand-border"
+                              className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg border border-brand-border"
                             >
                               <img src={foto.url} alt="Foto do item" className="h-full w-full object-cover" />
+                              {foto.created_at && (
+                                <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-slate-900 shadow-sm">
+                                  {formatarCarimboFoto(foto.created_at)}
+                                </span>
+                              )}
                             </button>
                           ))}
                         </div>

@@ -155,6 +155,12 @@ Atualizada em `ESTADOS_ITEM` (`src/lib/vistoriaExecucao.js`) — fonte única us
 
 Antes, "Ótimo" e "Bom" usavam dois tons de verde bem parecidos (`#16A34A` e `#65A30D`) — difícil de distinguir à primeira vista. A troca pra azul/verde deixa as quatro condições visualmente inconfundíveis.
 
+### Carimbo de Data/Hora visível na miniatura (sem precisar clicar)
+
+Cada miniatura de foto — tanto no laudo em PDF quanto na versão HTML (`/vistorias/:id/laudo`) — agora mostra um carimbo sobreposto no canto superior esquerdo: fundo branco translúcido, cantos arredondados, texto escuro em `DD/MM/AAAA às HH:MM:SS` (com segundos). No PDF isso é `styles.carimboDataHora` — um `View` com `position: 'absolute'`, `top: 8`, `left: 8`, `zIndex: 10`, dentro de um `photoFrame` com `position: 'relative'` envolvendo a imagem; na versão HTML é um `<span>` `absolute` equivalente, com `pointer-events-none` (garante que o clique sempre chega no botão por baixo, nunca "trava" no carimbo).
+
+**Por que não regravei o carimbo nos pixels da imagem (Canvas) de novo**: o `@react-pdf/renderer` já suporta `position: absolute`/`zIndex` de forma confiável — testei a abordagem de overlay antes de considerar a alternativa de regravar pixels, e não há motivo pra acreditar que a biblioteca vá "esconder" esse elemento sobreposto (isso não é uma limitação conhecida dela). Além disso, as fotos já têm **um** carimbo queimado nos pixels desde o upload (`imageProcessing.js`, formato mais curto, sem segundos, fundo escuro) — regravar um segundo carimbo por cima, com formato e estilo diferentes, criaria dois carimbos sobrepostos na mesma foto, um vindo dos pixels e outro do overlay, provavelmente ilegíveis um por cima do outro. O overlay novo (com segundos, fundo branco) é o que aparece no laudo; o carimbo antigo nos pixels continua existindo como garantia extra caso a foto seja baixada/vista fora do app, sem interferir visualmente no laudo.
+
 ### Por que as fotos apareciam em branco no PDF
 
 `imageProcessing.js` comprime as fotos em **WebP** quando o navegador suporta (a maioria hoje). O `@react-pdf/renderer`, porém, só decodifica **PNG e JPEG** nativamente — qualquer imagem `.webp` vira uma caixa em branco no PDF, mesmo com a URL certa, sem nenhum problema de CORS envolvido. A correção, em `laudoPdf.jsx`:
