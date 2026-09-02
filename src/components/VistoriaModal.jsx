@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import Modal from './Modal'
+import SuccessBanner from './SuccessBanner'
 import { TIPOS_VISTORIA } from '../lib/constants'
 import { useImoveis } from '../hooks/useImoveis'
 import { useProfiles } from '../hooks/useProfiles'
@@ -55,6 +56,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
   const [savingImovel, setSavingImovel] = useState(false)
   const [buscandoCep, setBuscandoCep] = useState(false)
   const [cepErro, setCepErro] = useState('')
+  const [imovelSucesso, setImovelSucesso] = useState('')
 
   useEffect(() => {
     if (open) {
@@ -73,6 +75,7 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
       }
       setErrorMsg('')
       setCepErro('')
+      setImovelSucesso('')
       setShowNovoImovel(false)
     }
   }, [open, defaultDate, vistoria])
@@ -118,15 +121,24 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
   const handleCreateImovel = async () => {
     if (!novoImovel.codigo_imovel || !novoImovel.endereco) return
     setSavingImovel(true)
+    setErrorMsg('')
     try {
       const data = await createImovel(novoImovel)
       const created = data?.[0]
       if (created) {
+        // Seleciona o imóvel recém-criado no formulário principal —
+        // Data/Hora/Vistoriador (o resto do formulário) não são
+        // tocados aqui, continuam exatamente como o usuário deixou.
         setForm((f) => ({ ...f, imovel_id: created.id }))
       }
       setShowNovoImovel(false)
       setNovoImovel(emptyNovoImovel)
       setCepErro('')
+
+      // Feedback rápido tipo toast — some sozinho depois de alguns
+      // segundos, não precisa de clique nenhum pra desaparecer.
+      setImovelSucesso('Imóvel cadastrado e selecionado com sucesso!')
+      setTimeout(() => setImovelSucesso(''), 4000)
     } catch (err) {
       setErrorMsg(err.message || 'Erro ao cadastrar imóvel.')
     } finally {
@@ -288,6 +300,12 @@ export default function VistoriaModal({ open, onClose, onSubmit, defaultDate, vi
               >
                 {savingImovel ? <Loader2 size={14} className="animate-spin" /> : 'Salvar imóvel'}
               </button>
+            </div>
+          )}
+
+          {imovelSucesso && (
+            <div className="mb-2">
+              <SuccessBanner message={imovelSucesso} />
             </div>
           )}
 
